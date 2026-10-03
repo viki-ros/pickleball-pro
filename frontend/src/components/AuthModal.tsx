@@ -194,6 +194,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, currentUser, onSav
                 ✓ DUPR profile linked: Ratings active on all match scorecards.
               </p>
             )}
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 inline shrink-0" />
+              <span>Only your rating is synced. Match scores are strictly private and never sent to DUPR.</span>
+            </p>
           </div>
 
           <div className="pt-3">

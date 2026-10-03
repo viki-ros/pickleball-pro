@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Friend, HeadToHeadStat } from "../types";
-import { UserPlus, Phone, Trash2, Swords, Award, ExternalLink, UserCheck } from "lucide-react";
+import { UserPlus, Phone, Trash2, Swords, Award, ExternalLink, UserCheck, RefreshCw, Shield } from "lucide-react";
 import { verifyDuprPlayer } from "../services/api";
 
 interface FriendsViewProps {
@@ -16,6 +16,7 @@ interface FriendsViewProps {
   ) => void;
   onDeleteFriend: (id: string) => void;
   onStartMatchWithFriend: (friend: Friend) => void;
+  onSyncFriendRating?: (friendId: string, duprId: string) => Promise<void> | void;
 }
 
 export const FriendsView: React.FC<FriendsViewProps> = ({
@@ -24,8 +25,10 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
   onAddFriend,
   onDeleteFriend,
   onStartMatchWithFriend,
+  onSyncFriendRating,
 }) => {
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [syncingFriendId, setSyncingFriendId] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [skill, setSkill] = useState<"Casual" | "Intermediate" | "Advanced">("Casual");
@@ -41,6 +44,16 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
       setDoublesRating(res.doublesRating);
       setSinglesRating(res.singlesRating);
     } catch {}
+  };
+
+  const handleSyncFriend = async (friendId: string, fDuprId: string) => {
+    if (!onSyncFriendRating) return;
+    try {
+      setSyncingFriendId(friendId);
+      await onSyncFriendRating(friendId, fDuprId);
+    } finally {
+      setSyncingFriendId(null);
+    }
   };
 
   const handleAddSubmit = (e: React.FormEvent) => {
@@ -169,9 +182,18 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
                   {/* Skill level, DUPR Badge, and H2H */}
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     {/* DUPR Badge */}
-                    <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-bold font-mono">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-bold font-mono">
                       <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                       <span>DUPR {friend.dupr_doubles_rating ? friend.dupr_doubles_rating.toFixed(2) : "3.50"}</span>
+                      {friend.dupr_id && onSyncFriendRating && (
+                        <button
+                          onClick={() => handleSyncFriend(friend.id, friend.dupr_id!)}
+                          title="Sync latest DUPR rating"
+                          className="ml-0.5 p-0.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${syncingFriendId === friend.id ? "animate-spin" : ""}`} />
+                        </button>
+                      )}
                     </div>
 
                     <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
@@ -301,6 +323,11 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
                     className="w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-0.5 text-right text-xs font-bold text-blue-700 dark:text-blue-400 font-mono"
                   />
                 </div>
+
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 inline shrink-0" />
+                  <span>Only player rating is synced. Match scores are never sent to DUPR.</span>
+                </p>
               </div>
 
               <div>

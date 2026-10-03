@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { RotateCcw, Volume2, VolumeX, Swords, Zap, Check, Award, Send, CheckCircle2 } from "lucide-react";
+import { RotateCcw, Volume2, VolumeX, Swords, Zap, Check, Award, Shield } from "lucide-react";
 import { Match } from "../types";
-import { recordRally, undoRally, resetMatch, submitMatchToDupr } from "../services/api";
+import { recordRally, undoRally, resetMatch } from "../services/api";
 
 interface LiveScoreTrackerProps {
   match: Match;
@@ -17,11 +17,6 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
   const [lastAction, setLastAction] = useState<string>("");
-  const [duprSubmitting, setDuprSubmitting] = useState<boolean>(false);
-  const [duprResult, setDuprResult] = useState<{ id: string; message: string; payload: any } | null>(
-    match.dupr_match_id ? { id: match.dupr_match_id, message: "Match synced with DUPR", payload: null } : null
-  );
-  const [showPayload, setShowPayload] = useState<boolean>(false);
 
   // Speak official score call via Web Speech API
   const speakScore = (callText: string) => {
@@ -73,35 +68,12 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
       setLoading(true);
       const updated = await resetMatch(match.id);
       onMatchUpdate(updated);
-      setDuprResult(null);
       setLastAction("Match reset to 0-0");
       speakScore(updated.score_call || "0 0 2");
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSubmitToDupr = async () => {
-    if (!match.is_completed || duprSubmitting) return;
-    try {
-      setDuprSubmitting(true);
-      const res = await submitMatchToDupr(match.id);
-      if (res.success) {
-        setDuprResult({
-          id: res.dupr_match_id,
-          message: res.message,
-          payload: res.payload,
-        });
-        match.dupr_status = "submitted";
-        match.dupr_match_id = res.dupr_match_id;
-        onMatchUpdate({ ...match, dupr_status: "submitted", dupr_match_id: res.dupr_match_id });
-      }
-    } catch (err) {
-      console.error("DUPR submission failed:", err);
-    } finally {
-      setDuprSubmitting(false);
     }
   };
 
@@ -143,12 +115,6 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
               {match.match_type.toUpperCase()} • To {match.target_points} (Win by {match.win_by})
             </span>
-            {match.dupr_status === "submitted" && (
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-300 dark:border-blue-500/20 flex items-center gap-1">
-                <Award className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                <span>DUPR Logged</span>
-              </span>
-            )}
           </div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1.5 truncate max-w-sm sm:max-w-md">
             {match.title}
@@ -206,52 +172,15 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
             {match.score_team1} - {match.score_team2}
           </div>
 
-          {/* DUPR Submission Status or Trigger */}
-          <div className="my-5 max-w-md mx-auto p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-left">
-            {duprResult ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-400 text-xs font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span>{duprResult.message}</span>
-                </div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono text-center">
-                  DUPR Ref ID: <span className="font-bold text-slate-900 dark:text-white">{duprResult.id}</span>
-                </div>
-                {duprResult.payload && (
-                  <button
-                    onClick={() => setShowPayload(!showPayload)}
-                    className="text-[10px] text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-300 underline block mx-auto mt-1"
-                  >
-                    {showPayload ? "Hide DUPR Schema Payload" : "View DUPR /match/v1.0 Payload"}
-                  </button>
-                )}
-                {showPayload && duprResult.payload && (
-                  <pre className="text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-[10px] text-slate-700 dark:text-slate-300 font-mono overflow-x-auto max-h-36">
-                    {JSON.stringify(duprResult.payload, null, 2)}
-                  </pre>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-400">
-                    <Award className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span>Sync with DUPR Rating</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                    Submit match to update player DUPR ratings.
-                  </p>
-                </div>
-                <button
-                  onClick={handleSubmitToDupr}
-                  disabled={duprSubmitting}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 flex items-center gap-1.5 whitespace-nowrap"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{duprSubmitting ? "Submitting..." : "Submit to DUPR"}</span>
-                </button>
-              </div>
-            )}
+          {/* Privacy & Career Stat Notice */}
+          <div className="my-5 max-w-md mx-auto p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+              <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Result Saved to Your Private Stats</span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+              Match scores are kept strictly private on your device/app and are never submitted to DUPR.
+            </p>
           </div>
 
           <div className="mt-2 flex flex-wrap justify-center gap-3">

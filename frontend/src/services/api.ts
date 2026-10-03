@@ -155,19 +155,20 @@ export async function fetchUserStats(userName: string, userPhone?: string): Prom
   return localStore.getUserStats(userName, userPhone);
 }
 
-// DUPR INTEGRATION API
+// DUPR INTEGRATION API (Player Rating Sync Only)
 export async function verifyDuprPlayer(duprIdOrName: string) {
   return localStore.verifyDuprPlayer(duprIdOrName);
 }
 
-export async function submitMatchToDupr(matchId: number) {
-  return localStore.submitMatchToDupr(matchId);
-}
-
-export async function getDuprConfig(): Promise<DuprConfig> {
-  return localStore.getDuprConfig();
-}
-
-export async function saveDuprConfig(config: DuprConfig): Promise<DuprConfig> {
-  return localStore.saveDuprConfig(config);
+export async function updateFriendDuprRating(friendId: string, duprId: string) {
+  const verified = await verifyDuprPlayer(duprId);
+  const updated = localStore.updateFriend(friendId, {
+    dupr_doubles_rating: verified.doublesRating,
+    dupr_singles_rating: verified.singlesRating,
+    dupr_verified: true,
+  });
+  try {
+    await fetch(`${API_BASE}/api/friends/${friendId}/sync-dupr`, { method: "PATCH" });
+  } catch (e) {}
+  return updated;
 }
