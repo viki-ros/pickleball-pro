@@ -33,9 +33,25 @@ def health_check():
 
 @app.on_event("startup")
 def seed_initial_data():
-    """Seeds initial courts, demo players, and an active match if the database is empty."""
+    """Migrates columns if needed, seeds initial courts, demo players, and active match."""
     db = SessionLocal()
     try:
+        from sqlalchemy import text
+        # Ensure DUPR columns exist on users and friends tables in SQLite
+        for tbl in ["users", "friends"]:
+            try:
+                res = db.execute(text(f"PRAGMA table_info({tbl})")).fetchall()
+                cols = [r[1] for r in res]
+                if "dupr_id" not in cols:
+                    db.execute(text(f"ALTER TABLE {tbl} ADD COLUMN dupr_id VARCHAR(50)"))
+                if "dupr_doubles_rating" not in cols:
+                    db.execute(text(f"ALTER TABLE {tbl} ADD COLUMN dupr_doubles_rating FLOAT DEFAULT 3.5"))
+                if "dupr_singles_rating" not in cols:
+                    db.execute(text(f"ALTER TABLE {tbl} ADD COLUMN dupr_singles_rating FLOAT DEFAULT 3.5"))
+                db.commit()
+            except Exception:
+                db.rollback()
+
         # 1. Seed Courts
         if db.query(Court).count() == 0:
             demo_courts = [

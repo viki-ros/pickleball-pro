@@ -113,7 +113,7 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
               {match.scoring_mode === "sideout" ? "Side-Out" : "Rally"}
             </span>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
-              {match.match_type.toUpperCase()} • To {match.target_points} (Win by {match.win_by})
+              {(match.match_type || "doubles").toUpperCase()} • To {match.target_points || 11} (Win by {match.win_by || 2})
             </span>
           </div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1.5 truncate max-w-sm sm:max-w-md">

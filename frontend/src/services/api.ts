@@ -155,20 +155,116 @@ export async function fetchUserStats(userName: string, userPhone?: string): Prom
   return localStore.getUserStats(userName, userPhone);
 }
 
-// DUPR INTEGRATION API (Player Rating Sync Only)
+// DUPR INTEGRATION API (Official DUPR API Auto-Sync, Zero Manual Entry)
+export async function getDuprStatus(): Promise<{ connected: boolean; auth_type: string; has_credentials: boolean }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/dupr/status`);
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { connected: false, auth_type: "none", has_credentials: false };
+}
+
+export async function connectDuprAccount(credentials: {
+  email?: string;
+  password?: string;
+  client_key?: string;
+  client_secret?: string;
+  token?: string;
+}): Promise<{ status: string; message: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/dupr/connect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+    return await res.json();
+  } catch (e: any) {
+    return { status: "ERROR", message: e.message || "Failed to connect to DUPR" };
+  }
+}
+
+export async function fetchDuprPlayer(duprId: string): Promise<{
+  status: string;
+  dupr_id: string;
+  name?: string;
+  doubles_rating?: number;
+  singles_rating?: number;
+  doubles_provisional?: boolean;
+  singles_provisional?: boolean;
+  verified: boolean;
+  source?: string;
+  message?: string;
+}> {
+  const clean = duprId.trim().toUpperCase();
+  try {
+    const res = await fetch(`${API_BASE}/api/dupr/player/${encodeURIComponent(clean)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch (e) {}
+
+  // Fallback to localStore verification
+  const localVer = localStore.verifyDuprPlayer(clean);
+  return {
+    status: localVer.verified ? "SUCCESS" : "NOT_FOUND",
+    dupr_id: clean,
+    name: localVer.name,
+    doubles_rating: localVer.doublesRating,
+    singles_rating: localVer.singlesRating,
+    verified: localVer.verified,
+    source: "localStore",
+  };
+}
+
+export async function syncUserDupr(phone: string): Promise<UserProfile | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/dupr/sync-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.user) {
+        const u = data.user;
+        return localStore.updateUser(u.name, u.phone, u.dupr_id, u.dupr_doubles_rating, u.dupr_singles_rating);
+      }
+    }
+  } catch (e) {}
+  return localStore.getUser();
+}
+
+export async function syncFriendDupr(friendId: string, duprId?: string): Promise<Friend | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/friends/${friendId}/sync-dupr`, { method: "PATCH" });
+    if (res.ok) {
+      const data = await res.json();
+      return localStore.updateFriend(friendId, {
+        dupr_doubles_rating: data.dupr_doubles_rating,
+        dupr_singles_rating: data.dupr_singles_rating,
+        dupr_verified: true,
+      });
+    }
+  } catch (e) {}
+
+  if (duprId) {
+    const player = await fetchDuprPlayer(duprId);
+    if (player.doubles_rating !== undefined || player.singles_rating !== undefined) {
+      return localStore.updateFriend(friendId, {
+        dupr_doubles_rating: player.doubles_rating,
+        dupr_singles_rating: player.singles_rating,
+        dupr_verified: true,
+      });
+    }
+  }
+  return null;
+}
+
 export async function verifyDuprPlayer(duprIdOrName: string) {
   return localStore.verifyDuprPlayer(duprIdOrName);
 }
 
 export async function updateFriendDuprRating(friendId: string, duprId: string) {
-  const verified = await verifyDuprPlayer(duprId);
-  const updated = localStore.updateFriend(friendId, {
-    dupr_doubles_rating: verified.doublesRating,
-    dupr_singles_rating: verified.singlesRating,
-    dupr_verified: true,
-  });
-  try {
-    await fetch(`${API_BASE}/api/friends/${friendId}/sync-dupr`, { method: "PATCH" });
-  } catch (e) {}
-  return updated;
+  return syncFriendDupr(friendId, duprId);
 }

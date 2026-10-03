@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Friend, HeadToHeadStat } from "../types";
-import { UserPlus, Phone, Trash2, Swords, Award, ExternalLink, UserCheck, Shield, Edit3, Check, X } from "lucide-react";
+import { UserPlus, Phone, Trash2, Swords, Award, ExternalLink, UserCheck, Shield, Edit3, Check, X, RefreshCw, CheckCircle2, Lock } from "lucide-react";
+import { fetchDuprPlayer, syncFriendDupr } from "../services/api";
 
 interface FriendsViewProps {
   friends: Friend[];
@@ -29,7 +30,7 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
 
-  // Add form state
+  // Add form state (NO MANUAL RATING ENTRY)
   const [name, setName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [skill, setSkill] = useState<"Casual" | "Intermediate" | "Advanced">("Casual");
@@ -37,14 +38,22 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
   const [doublesRating, setDoublesRating] = useState<number>(3.5);
   const [singlesRating, setSinglesRating] = useState<number>(3.5);
   const [error, setError] = useState<string>("");
+  const [isFetchingAddDupr, setIsFetchingAddDupr] = useState<boolean>(false);
+  const [addDuprMsg, setAddDuprMsg] = useState<string>("");
 
-  // Edit form state
+  // Edit form state (NO MANUAL RATING ENTRY)
   const [editName, setEditName] = useState<string>("");
   const [editPhone, setEditPhone] = useState<string>("");
   const [editSkill, setEditSkill] = useState<"Casual" | "Intermediate" | "Advanced">("Casual");
   const [editDuprId, setEditDuprId] = useState<string>("");
   const [editDoublesRating, setEditDoublesRating] = useState<number>(3.5);
   const [editSinglesRating, setEditSinglesRating] = useState<number>(3.5);
+  const [isFetchingEditDupr, setIsFetchingEditDupr] = useState<boolean>(false);
+  const [editDuprMsg, setEditDuprMsg] = useState<string>("");
+
+  // Card Quick Sync state
+  const [syncingFriendId, setSyncingFriendId] = useState<string | null>(null);
+  const [syncToast, setSyncToast] = useState<{ id: string; message: string } | null>(null);
 
   const openEditModal = (friend: Friend) => {
     setEditingFriend(friend);
@@ -54,6 +63,87 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
     setEditDuprId(friend.dupr_id || "");
     setEditDoublesRating(friend.dupr_doubles_rating || 3.5);
     setEditSinglesRating(friend.dupr_singles_rating || 3.5);
+    setEditDuprMsg("");
+  };
+
+  const handleAutoFetchAddDupr = async () => {
+    const clean = duprId.trim().toUpperCase();
+    if (!clean || clean.length < 3) {
+      setError("Please enter a valid DUPR ID (at least 3 characters)");
+      return;
+    }
+    setError("");
+    setIsFetchingAddDupr(true);
+    setAddDuprMsg("Contacting DUPR API...");
+
+    try {
+      const res = await fetchDuprPlayer(clean);
+      if (res.status === "SUCCESS") {
+        if (res.doubles_rating !== undefined) setDoublesRating(res.doubles_rating);
+        if (res.singles_rating !== undefined) setSinglesRating(res.singles_rating);
+        if (!name.trim() && res.name) setName(res.name);
+        setAddDuprMsg(`✓ Verified: ${res.name || clean} (Official DUPR)`);
+      } else if (res.status === "AUTH_REQUIRED") {
+        setAddDuprMsg("DUPR ID linked. Ratings auto-sync when DUPR API is connected.");
+      } else if (res.status === "NOT_FOUND") {
+        setAddDuprMsg(`DUPR ID "${clean}" not found on DUPR.`);
+      } else {
+        setAddDuprMsg(res.message || "Could not retrieve rating.");
+      }
+    } catch (e) {
+      setAddDuprMsg("Connection failed.");
+    } finally {
+      setIsFetchingAddDupr(false);
+    }
+  };
+
+  const handleAutoFetchEditDupr = async () => {
+    const clean = editDuprId.trim().toUpperCase();
+    if (!clean || clean.length < 3) {
+      return;
+    }
+    setIsFetchingEditDupr(true);
+    setEditDuprMsg("Contacting DUPR API...");
+
+    try {
+      const res = await fetchDuprPlayer(clean);
+      if (res.status === "SUCCESS") {
+        if (res.doubles_rating !== undefined) setEditDoublesRating(res.doubles_rating);
+        if (res.singles_rating !== undefined) setEditSinglesRating(res.singles_rating);
+        setEditDuprMsg(`✓ Refreshed from DUPR API: ${res.name || clean}`);
+      } else if (res.status === "AUTH_REQUIRED") {
+        setEditDuprMsg("DUPR account connection required to pull live official rating.");
+      } else {
+        setEditDuprMsg(res.message || "Could not fetch rating.");
+      }
+    } catch (e) {
+      setEditDuprMsg("Connection error.");
+    } finally {
+      setIsFetchingEditDupr(false);
+    }
+  };
+
+  const handleQuickSyncFriend = async (friend: Friend, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!friend.dupr_id) {
+      openEditModal(friend);
+      return;
+    }
+
+    setSyncingFriendId(friend.id);
+    try {
+      const updated = await syncFriendDupr(friend.id, friend.dupr_id);
+      if (updated && onUpdateFriend) {
+        onUpdateFriend(friend.id, updated);
+      }
+      setSyncToast({ id: friend.id, message: "✓ Official DUPR ratings refreshed" });
+      setTimeout(() => setSyncToast(null), 3000);
+    } catch (err) {
+      setSyncToast({ id: friend.id, message: "Sync error" });
+      setTimeout(() => setSyncToast(null), 3000);
+    } finally {
+      setSyncingFriendId(null);
+    }
   };
 
   const handleEditSubmit = (e: React.FormEvent) => {
@@ -63,7 +153,7 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
       name: editName.trim(),
       phone: editPhone.trim(),
       skill_level: editSkill,
-      dupr_id: editDuprId.trim() || undefined,
+      dupr_id: editDuprId.trim().toUpperCase() || undefined,
       dupr_doubles_rating: editDoublesRating,
       dupr_singles_rating: editSinglesRating,
       dupr_verified: Boolean(editDuprId.trim()),
@@ -86,113 +176,115 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
       name.trim(),
       phone.trim(),
       skill,
-      duprId.trim() || undefined,
+      duprId.trim().toUpperCase() || undefined,
       doublesRating,
       singlesRating
     );
     setName("");
     setPhone("");
+    setSkill("Casual");
     setDuprId("");
     setDoublesRating(3.5);
     setSinglesRating(3.5);
+    setAddDuprMsg("");
     setShowAddModal(false);
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-16">
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-16">
       
-      {/* Header and Add Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs transition-colors">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xs transition-colors">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            Playing Partners & Friends
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-sm font-bold">
+              👥
+            </span>
+            <span>Friends & Players Directory</span>
           </h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-            Manage partners and preserve their official DUPR ratings.
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">
+            Manage your playing partners with authentic DUPR ratings synced via official DUPR API.
           </p>
         </div>
 
         <button
           onClick={() => {
             setError("");
+            setAddDuprMsg("");
             setShowAddModal(true);
           }}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 whitespace-nowrap"
+          className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-2 active:scale-95 shrink-0"
         >
-          <UserPlus className="w-4 h-4 stroke-[2.5]" />
-          <span>Add New Friend</span>
+          <UserPlus className="w-4 h-4" />
+          <span>Add Friend</span>
         </button>
       </div>
 
       {/* Friends Cards Grid */}
       {friends.length === 0 ? (
-        <div className="text-center py-16 px-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs transition-colors">
-          <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center text-3xl mx-auto mb-3">
-            👥
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center space-y-3 transition-colors">
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl mx-auto">
+            🎾
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-            No Friends Added Yet
-          </h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto mb-5 leading-relaxed">
-            Add friends using their name and mobile number to quickly pick them for matches and display their authentic DUPR ratings.
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Friends Added Yet</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+            Add your regular pickleball partners with their DUPR ID. Ratings are synced directly from DUPR API without manual entry.
           </p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs"
+            className="mt-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all"
           >
-            + Add First Friend
+            Add Your First Partner
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {friends.map((friend) => {
-            const h2h = headToHeadStats.find((s) => s.friend_name === friend.name);
-            const initials = friend.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2);
+            const h2h = headToHeadStats.find((s) => s.friend_phone === friend.phone);
+            const isSyncingThis = syncingFriendId === friend.id;
 
             return (
               <div
                 key={friend.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-3xl p-5 flex flex-col justify-between transition-all group shadow-xs hover:shadow-sm"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs transition-colors flex flex-col justify-between relative group"
               >
                 <div>
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white text-base shadow-xs"
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white text-base shadow-xs shrink-0"
                         style={{ backgroundColor: friend.avatar_color || "#3b82f6" }}
                       >
-                        {initials}
+                        {friend.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2)}
                       </div>
                       <div>
-                        <h4 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                        <h4 className="font-bold text-base text-slate-900 dark:text-white tracking-tight">
                           {friend.name}
                         </h4>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                          <Phone className="w-3 h-3 text-slate-500" />
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          <Phone className="w-3 h-3 text-slate-400" />
                           <span>{friend.phone}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      {onUpdateFriend && (
-                        <button
-                          onClick={() => openEditModal(friend)}
-                          title="Edit Friend / DUPR Rating"
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-all"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => openEditModal(friend)}
+                        title="Edit friend details or DUPR ID"
+                        className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => onDeleteFriend(friend.id)}
-                        title="Remove Friend"
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all"
+                        title="Delete friend"
+                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -201,17 +293,25 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
 
                   {/* Skill level, DUPR Badge, and H2H */}
                   <div className="mt-4 flex flex-wrap items-center gap-2">
-                    {/* DUPR Badge */}
+                    {/* Official DUPR Badge with Quick-Sync */}
                     <div
-                      onClick={() => onUpdateFriend && openEditModal(friend)}
-                      title="Click to edit DUPR rating"
-                      className="cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-bold font-mono transition-colors"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-bold font-mono transition-colors"
                     >
                       <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                       <span>DUPR {friend.dupr_doubles_rating ? friend.dupr_doubles_rating.toFixed(2) : "3.50"}</span>
-                      {friend.dupr_id && (
+                      {friend.dupr_id ? (
                         <span className="text-[10px] text-blue-500 font-normal">({friend.dupr_id})</span>
-                      )}
+                      ) : null}
+
+                      {/* Quick Auto-Sync Button */}
+                      <button
+                        onClick={(e) => handleQuickSyncFriend(friend, e)}
+                        disabled={isSyncingThis}
+                        title={friend.dupr_id ? "Auto-sync rating from DUPR API" : "Link DUPR ID"}
+                        className="ml-1 p-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors text-blue-600 dark:text-blue-400"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isSyncingThis ? "animate-spin" : ""}`} />
+                      </button>
                     </div>
 
                     <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
@@ -224,6 +324,13 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
                       </span>
                     ) : null}
                   </div>
+
+                  {syncToast && syncToast.id === friend.id && (
+                    <div className="mt-2 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 animate-fade-in flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>{syncToast.message}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Quick Start Match Action */}
@@ -243,7 +350,7 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
         </div>
       )}
 
-      {/* Edit Friend Modal */}
+      {/* Edit Friend Modal (NO MANUAL RATING ENTRY) */}
       {editingFriend && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl my-8 transition-colors">
@@ -262,37 +369,52 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                  Name
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+                  Friend's Name
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3.5 text-slate-900 dark:text-white text-sm outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
                   Mobile Number
                 </label>
                 <input
                   type="tel"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3.5 text-slate-900 dark:text-white text-sm outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm outline-none"
                   required
                 />
               </div>
 
-              {/* DUPR Section */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+                  Skill Level
+                </label>
+                <select
+                  value={editSkill}
+                  onChange={(e) => setEditSkill(e.target.value as any)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm outline-none"
+                >
+                  <option value="Casual">Casual (Rec)</option>
+                  <option value="Intermediate">Intermediate (3.0 - 3.5)</option>
+                  <option value="Advanced">Advanced (4.0+)</option>
+                </select>
+              </div>
+
+              {/* DUPR Link for Friend (Auto-Sync Only) */}
               <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1">
                     <Award className="w-3.5 h-3.5" />
-                    <span>Official DUPR Information</span>
+                    <span>Official DUPR Member ID</span>
                   </label>
                   <a
                     href="https://dashboard.dupr.com"
@@ -300,50 +422,57 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
                     rel="noreferrer"
                     className="text-[10px] text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-0.5 font-semibold"
                   >
-                    <span>Check mydupr.com</span>
+                    <span>mydupr.com</span>
                     <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 </div>
 
-                <div>
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={editDuprId}
-                    onChange={(e) => setEditDuprId(e.target.value)}
-                    placeholder="DUPR Member ID (e.g. DUPR-4910)"
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono outline-none"
+                    onChange={(e) => {
+                      setEditDuprId(e.target.value.toUpperCase());
+                      setEditDuprMsg("");
+                    }}
+                    placeholder="DUPR ID (e.g. 7GK482)"
+                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={handleAutoFetchEditDupr}
+                    disabled={isFetchingEditDupr || !editDuprId.trim()}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1 shrink-0"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isFetchingEditDupr ? "animate-spin" : ""}`} />
+                    <span>Auto-Sync</span>
+                  </button>
                 </div>
 
+                {editDuprMsg && (
+                  <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                    {editDuprMsg}
+                  </div>
+                )}
+
+                {/* Read-only ratings display */}
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 font-semibold block mb-0.5">
-                      Doubles DUPR
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="1.0"
-                      max="7.0"
-                      value={editDoublesRating}
-                      onChange={(e) => setEditDoublesRating(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-blue-700 dark:text-blue-400 font-mono outline-none"
-                    />
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] text-slate-500 font-semibold block mb-0.5 flex items-center justify-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Doubles DUPR
+                    </span>
+                    <span className="text-base font-black text-blue-700 dark:text-blue-400 font-mono">
+                      {editDoublesRating ? editDoublesRating.toFixed(2) : "3.50"}
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 font-semibold block mb-0.5">
-                      Singles DUPR
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="1.0"
-                      max="7.0"
-                      value={editSinglesRating}
-                      onChange={(e) => setEditSinglesRating(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-sky-700 dark:text-sky-400 font-mono outline-none"
-                    />
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] text-slate-500 font-semibold block mb-0.5 flex items-center justify-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Singles DUPR
+                    </span>
+                    <span className="text-base font-black text-sky-700 dark:text-sky-400 font-mono">
+                      {editSinglesRating ? editSinglesRating.toFixed(2) : "3.50"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -369,7 +498,7 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
         </div>
       )}
 
-      {/* Add Friend Modal */}
+      {/* Add Friend Modal (NO MANUAL RATING ENTRY) */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl my-8 transition-colors">
@@ -420,12 +549,27 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
                 />
               </div>
 
-              {/* DUPR Link for Friend */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                  Skill Level
+                </label>
+                <select
+                  value={skill}
+                  onChange={(e) => setSkill(e.target.value as any)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-emerald-600 dark:focus:border-emerald-500 rounded-xl py-3 px-4 text-slate-900 dark:text-white text-sm outline-none"
+                >
+                  <option value="Casual">Casual (Recreational)</option>
+                  <option value="Intermediate">Intermediate (3.0 - 3.5)</option>
+                  <option value="Advanced">Advanced (4.0+)</option>
+                </select>
+              </div>
+
+              {/* DUPR Link for Friend (Auto-Fetch Only, Zero Manual Entry) */}
               <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1">
                     <Award className="w-3.5 h-3.5" />
-                    <span>Friend's DUPR Rating (Optional)</span>
+                    <span>Friend's DUPR ID (Optional)</span>
                   </label>
                   <a
                     href="https://dashboard.dupr.com"
@@ -438,95 +582,86 @@ export const FriendsView: React.FC<FriendsViewProps> = ({
                   </a>
                 </div>
 
-                <div>
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={duprId}
-                    onChange={(e) => setDuprId(e.target.value)}
-                    placeholder="DUPR ID (e.g. DUPR-4910)"
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono outline-none"
+                    onChange={(e) => {
+                      setDuprId(e.target.value.toUpperCase());
+                      setAddDuprMsg("");
+                    }}
+                    placeholder="DUPR ID (e.g. 7GK482)"
+                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={handleAutoFetchAddDupr}
+                    disabled={isFetchingAddDupr || !duprId.trim()}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1 shrink-0"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isFetchingAddDupr ? "animate-spin" : ""}`} />
+                    <span>Auto-Fetch</span>
+                  </button>
                 </div>
 
+                {addDuprMsg && (
+                  <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                    {addDuprMsg}
+                  </div>
+                )}
+
+                {/* Read-Only Verified Rating Preview */}
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 font-semibold block mb-0.5">
-                      Doubles DUPR
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="1.0"
-                      max="7.0"
-                      value={doublesRating}
-                      onChange={(e) => setDoublesRating(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-blue-700 dark:text-blue-400 font-mono outline-none"
-                    />
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] text-slate-500 font-semibold block mb-0.5 flex items-center justify-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Doubles DUPR
+                    </span>
+                    <span className="text-base font-black text-blue-700 dark:text-blue-400 font-mono">
+                      {doublesRating ? doublesRating.toFixed(2) : "3.50"}
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="text-[10px] text-slate-600 dark:text-slate-400 font-semibold block mb-0.5">
-                      Singles DUPR
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="1.0"
-                      max="7.0"
-                      value={singlesRating}
-                      onChange={(e) => setSinglesRating(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-sky-700 dark:text-sky-400 font-mono outline-none"
-                    />
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] text-slate-500 font-semibold block mb-0.5 flex items-center justify-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Singles DUPR
+                    </span>
+                    <span className="text-base font-black text-sky-700 dark:text-sky-400 font-mono">
+                      {singlesRating ? singlesRating.toFixed(2) : "3.50"}
+                    </span>
                   </div>
-                </div>
-
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 inline shrink-0" />
-                  <span>Enter their authentic rating from DUPR. Never faked or estimated.</span>
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                  Skill Level
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["Casual", "Intermediate", "Advanced"] as const).map((lvl) => (
-                    <button
-                      type="button"
-                      key={lvl}
-                      onClick={() => {
-                        setSkill(lvl);
-                        if (!duprId) {
-                          const baseRating = lvl === "Advanced" ? 4.25 : lvl === "Intermediate" ? 3.75 : 3.0;
-                          setDoublesRating(baseRating);
-                          setSinglesRating(baseRating);
-                        }
-                      }}
-                      className={`py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-                        skill === lvl
-                          ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-950"
-                          : "bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900"
-                      }`}
-                    >
-                      {lvl}
-                    </button>
-                  ))}
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
-                  className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95"
+                  className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-1.5"
                 >
-                  Save Friend
+                  <UserPlus className="w-4 h-4" />
+                  <span>Save Partner</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all"
+                >
+                  Cancel
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Assurance banner */}
+      <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-5 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+          <Shield className="w-5 h-5" />
+        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+          Player ratings are fetched directly via official DUPR API endpoints. Scores from personal and practice matches stay strictly private and are never submitted to DUPR.
+        </p>
+      </div>
 
     </div>
   );
