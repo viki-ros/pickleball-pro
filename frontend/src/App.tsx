@@ -22,10 +22,28 @@ import { localStore } from "./services/localStore";
 import { Swords, Plus, History } from "lucide-react";
 
 export function App() {
-  // Synchronous multi-tier storage initialization ensures the login persists across page loads
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => localStore.getUser());
   const [showAuthModal, setShowAuthModal] = useState<boolean>(() => !localStore.getUser());
   const [activeTab, setActiveTab] = useState<"match" | "friends" | "stats" | "profile">("match");
+
+  // Persistent Light / Dark Theme Mode (Default: Light "Daylight Court")
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const saved = localStorage.getItem("pb_theme");
+    return saved === "dark" || saved === "light" ? saved : "light";
+  });
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("pb_theme", theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  };
 
   const [friends, setFriends] = useState<Friend[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -179,7 +197,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950 font-sans antialiased">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white font-sans antialiased transition-colors">
       
       {/* Top Navbar */}
       <Navbar
@@ -192,6 +210,8 @@ export function App() {
         }}
         onOpenProfile={() => setActiveTab("profile")}
         hasActiveMatch={Boolean(currentMatch && !currentMatch.is_completed)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main Container */}
@@ -199,8 +219,8 @@ export function App() {
         
         {loading && !currentUser ? (
           <div className="py-24 text-center">
-            <div className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin mx-auto mb-4" />
-            <p className="text-slate-400 text-xs">Opening Pickleball Tracker...</p>
+            <div className="w-10 h-10 rounded-full border-4 border-emerald-600 dark:border-emerald-500 border-t-transparent animate-spin mx-auto mb-4" />
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold">Opening Pickleball Tracker...</p>
           </div>
         ) : (
           <>
@@ -218,10 +238,10 @@ export function App() {
                         <button
                           key={m.id}
                           onClick={() => setCurrentMatch(m)}
-                          className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
                             currentMatch.id === m.id
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                              : "bg-slate-900 text-slate-400 border-slate-800 hover:text-white"
+                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800/40 shadow-xs"
+                              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-950 dark:hover:text-white"
                           }`}
                         >
                           {m.is_completed ? "✓ " : "🎾 "}
@@ -239,14 +259,14 @@ export function App() {
                 </div>
               ) : (
                 /* No Active Match: Empty state with start button */
-                <div className="text-center py-20 px-6 bg-slate-900 border border-slate-800 rounded-3xl max-w-lg mx-auto shadow-sm">
-                  <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl mx-auto mb-4">
+                <div className="text-center py-20 px-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg mx-auto shadow-sm transition-colors">
+                  <div className="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl mx-auto mb-4">
                     🏓
                   </div>
-                  <h3 className="text-xl font-black text-white tracking-tight mb-1.5">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-1.5">
                     Ready to Play?
                   </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto mb-6">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm mx-auto mb-6 font-medium">
                     Start a new singles (1v1) or doubles (2v2) match with your friends. Points and stats will automatically calculate.
                   </p>
                   <button
@@ -254,7 +274,7 @@ export function App() {
                       setPreselectedFriend(null);
                       setShowCreateMatchModal(true);
                     }}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-95"
                   >
                     <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Create Match Now</span>

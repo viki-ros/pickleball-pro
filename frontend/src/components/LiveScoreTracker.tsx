@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { RotateCcw, Volume2, VolumeX, Trophy, Swords, Zap, Check, Award, Send, CheckCircle2, FileText } from "lucide-react";
+import { RotateCcw, Volume2, VolumeX, Swords, Zap, Check, Award, Send, CheckCircle2 } from "lucide-react";
 import { Match } from "../types";
 import { recordRally, undoRally, resetMatch, submitMatchToDupr } from "../services/api";
 
@@ -19,7 +19,7 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
   const [lastAction, setLastAction] = useState<string>("");
   const [duprSubmitting, setDuprSubmitting] = useState<boolean>(false);
   const [duprResult, setDuprResult] = useState<{ id: string; message: string; payload: any } | null>(
-    match.dupr_match_id ? { id: match.dupr_match_id, message: "Match previously synced with DUPR", payload: null } : null
+    match.dupr_match_id ? { id: match.dupr_match_id, message: "Match synced with DUPR", payload: null } : null
   );
   const [showPayload, setShowPayload] = useState<boolean>(false);
 
@@ -131,37 +131,37 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
   );
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5 animate-fade-in pb-12">
+    <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5 animate-fade-in pb-16">
       
       {/* Header Info Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-              {match.scoring_mode === "sideout" ? "Side-Out Scoring" : "Rally Scoring"}
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-500/20">
+              {match.scoring_mode === "sideout" ? "Side-Out" : "Rally"}
             </span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-full">
-              {match.match_type.toUpperCase()} • First to {match.target_points} (Win by {match.win_by})
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+              {match.match_type.toUpperCase()} • To {match.target_points} (Win by {match.win_by})
             </span>
             {match.dupr_status === "submitted" && (
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 flex items-center gap-1">
-                <Award className="w-3 h-3" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-300 dark:border-blue-500/20 flex items-center gap-1">
+                <Award className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                 <span>DUPR Logged</span>
               </span>
             )}
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-white mt-1.5 truncate max-w-sm sm:max-w-md">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1.5 truncate max-w-sm sm:max-w-md">
             {match.title}
           </h2>
         </div>
 
         {/* Audio Referee Toggle & Call */}
-        <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2 w-full sm:w-auto justify-between sm:justify-start">
+        <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-2 w-full sm:w-auto justify-between sm:justify-start">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400 block">
               Referee Call
             </span>
-            <span className="text-xl sm:text-2xl font-black text-amber-300 font-mono tracking-wider">
+            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-amber-300 font-mono tracking-wider">
               {match.score_call || "0 - 0 - 2"}
             </span>
           </div>
@@ -170,8 +170,8 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
             title={voiceEnabled ? "Voice referee ON" : "Voice referee MUTED"}
             className={`p-2.5 rounded-xl border transition-all ${
               voiceEnabled
-                ? "bg-amber-400/10 border-amber-400/30 text-amber-300 hover:bg-amber-400/20"
-                : "bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300"
+                ? "bg-amber-100 dark:bg-amber-400/10 border-amber-300 dark:border-amber-400/30 text-amber-900 dark:text-amber-300"
+                : "bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
             {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
@@ -181,71 +181,71 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
 
       {/* Match Point Alert */}
       {isMatchPoint && (
-        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-4 py-3 rounded-2xl flex items-center justify-between animate-pulse shadow-sm">
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-300 px-4 py-3 rounded-2xl flex items-center justify-between animate-pulse shadow-xs">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-amber-400" />
-            <span className="font-black text-xs uppercase tracking-wider">Match Point in Effect!</span>
+            <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span className="font-bold text-xs uppercase tracking-wider">Match Point in Effect</span>
           </div>
-          <span className="text-xs font-semibold">First to {match.target_points} (win by {match.win_by})</span>
+          <span className="text-xs font-medium">Target: {match.target_points} (win by {match.win_by})</span>
         </div>
       )}
 
       {/* Match Complete Victory Card */}
       {match.is_completed && (
-        <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-6 sm:p-7 text-center shadow-2xl relative overflow-hidden animate-fade-in">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-3xl mx-auto mb-3">
+        <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 sm:p-7 text-center shadow-lg relative overflow-hidden animate-fade-in transition-colors">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl mx-auto mb-3">
             🏆
           </div>
-          <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            MATCH FINISHED!
+          <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            MATCH FINISHED
           </h3>
-          <p className="text-lg font-bold text-emerald-400 mt-1">
+          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 mt-1">
             {match.winner_team === 1 ? team1Label : team2Label} Won the Match!
           </p>
-          <div className="text-2xl font-black text-white font-mono mt-2">
+          <div className="text-3xl font-black text-slate-900 dark:text-white font-mono mt-2 tracking-tight">
             {match.score_team1} - {match.score_team2}
           </div>
 
           {/* DUPR Submission Status or Trigger */}
-          <div className="my-5 max-w-md mx-auto p-4 rounded-2xl bg-slate-950 border border-slate-800">
+          <div className="my-5 max-w-md mx-auto p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-left">
             {duprResult ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2 text-blue-400 text-xs font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-400 text-xs font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   <span>{duprResult.message}</span>
                 </div>
-                <div className="text-[11px] text-slate-400 font-mono">
-                  DUPR Ref ID: <span className="text-white font-bold">{duprResult.id}</span>
+                <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono text-center">
+                  DUPR Ref ID: <span className="font-bold text-slate-900 dark:text-white">{duprResult.id}</span>
                 </div>
                 {duprResult.payload && (
                   <button
                     onClick={() => setShowPayload(!showPayload)}
-                    className="text-[10px] text-slate-500 hover:text-slate-300 underline block mx-auto"
+                    className="text-[10px] text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-300 underline block mx-auto mt-1"
                   >
                     {showPayload ? "Hide DUPR Schema Payload" : "View DUPR /match/v1.0 Payload"}
                   </button>
                 )}
                 {showPayload && duprResult.payload && (
-                  <pre className="text-left bg-slate-900 p-2.5 rounded-xl text-[10px] text-slate-300 font-mono overflow-x-auto max-h-36">
+                  <pre className="text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-[10px] text-slate-700 dark:text-slate-300 font-mono overflow-x-auto max-h-36">
                     {JSON.stringify(duprResult.payload, null, 2)}
                   </pre>
                 )}
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-left">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400">
-                    <Award className="w-4 h-4" />
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-400">
+                    <Award className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <span>Sync with DUPR Rating</span>
                   </div>
-                  <p className="text-[11px] text-slate-400">
-                    Submit this result to update players' official DUPR ratings.
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    Submit match to update player DUPR ratings.
                   </p>
                 </div>
                 <button
                   onClick={handleSubmitToDupr}
                   disabled={duprSubmitting}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-1.5 whitespace-nowrap"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-95 flex items-center gap-1.5 whitespace-nowrap"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{duprSubmitting ? "Submitting..." : "Submit to DUPR"}</span>
@@ -257,14 +257,14 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
           <div className="mt-2 flex flex-wrap justify-center gap-3">
             <button
               onClick={handleReset}
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all border border-slate-700 active:scale-95"
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-all border border-slate-200 dark:border-slate-700 active:scale-95"
             >
               Play Rematch (Reset)
             </button>
             {onFinishMatch && (
               <button
                 onClick={onFinishMatch}
-                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl transition-all shadow-md active:scale-95 uppercase tracking-wider"
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95 uppercase tracking-wider"
               >
                 View Match Stats
               </button>
@@ -278,17 +278,17 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
         
         {/* TEAM 1 CARD */}
         <div
-          className={`rounded-3xl border-2 p-6 flex flex-col justify-between transition-all shadow-sm ${
+          className={`rounded-3xl border-2 p-6 flex flex-col justify-between transition-all shadow-xs ${
             match.serving_team === 1
-              ? "bg-slate-900 border-emerald-500 shadow-emerald-500/5 ring-1 ring-emerald-500/30"
-              : "bg-slate-900/90 border-slate-800"
+              ? "bg-emerald-50/20 dark:bg-slate-900 border-emerald-600 dark:border-emerald-500 ring-2 ring-emerald-500/10 shadow-sm"
+              : "bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800"
           }`}
         >
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Team 1</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Team 1</span>
               {match.serving_team === 1 && (
-                <span className="text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 flex items-center gap-1 shadow-sm">
+                <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950 flex items-center gap-1 shadow-xs">
                   <span>🎾 SERVING</span>
                   {match.match_type === "doubles" && match.scoring_mode === "sideout" && (
                     <span>(Server {match.server_number})</span>
@@ -297,14 +297,14 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
               )}
             </div>
 
-            <h3 className="text-lg font-black text-white tracking-tight truncate">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
               {team1Label}
             </h3>
           </div>
 
           {/* Huge Number */}
-          <div className="my-6 text-center">
-            <span className="text-8xl sm:text-9xl font-black font-mono tracking-tighter text-white select-none">
+          <div className="my-6 sm:my-8 text-center">
+            <span className="text-8xl sm:text-9xl font-black font-mono tracking-tighter text-slate-900 dark:text-white select-none">
               {match.score_team1}
             </span>
           </div>
@@ -313,10 +313,10 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
           <button
             onClick={() => handleRallyWon(1)}
             disabled={match.is_completed || loading}
-            className={`w-full py-4 sm:py-5 rounded-2xl text-base font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
+            className={`w-full py-4 sm:py-5 rounded-2xl text-base font-bold uppercase tracking-wider transition-all shadow-xs active:scale-95 flex items-center justify-center gap-2 ${
               match.is_completed
-                ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20"
+                ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/15"
             }`}
           >
             <Check className="w-5 h-5 stroke-[3]" />
@@ -326,17 +326,17 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
 
         {/* TEAM 2 CARD */}
         <div
-          className={`rounded-3xl border-2 p-6 flex flex-col justify-between transition-all shadow-sm ${
+          className={`rounded-3xl border-2 p-6 flex flex-col justify-between transition-all shadow-xs ${
             match.serving_team === 2
-              ? "bg-slate-900 border-sky-500 shadow-sky-500/5 ring-1 ring-sky-500/30"
-              : "bg-slate-900/90 border-slate-800"
+              ? "bg-blue-50/20 dark:bg-slate-900 border-blue-600 dark:border-sky-500 ring-2 ring-blue-500/10 shadow-sm"
+              : "bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800"
           }`}
         >
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Team 2</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Team 2</span>
               {match.serving_team === 2 && (
-                <span className="text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full bg-sky-500 text-slate-950 flex items-center gap-1 shadow-sm">
+                <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-blue-600 text-white dark:bg-sky-500 dark:text-slate-950 flex items-center gap-1 shadow-xs">
                   <span>🎾 SERVING</span>
                   {match.match_type === "doubles" && match.scoring_mode === "sideout" && (
                     <span>(Server {match.server_number})</span>
@@ -345,14 +345,14 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
               )}
             </div>
 
-            <h3 className="text-lg font-black text-white tracking-tight truncate">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
               {team2Label}
             </h3>
           </div>
 
           {/* Huge Number */}
-          <div className="my-6 text-center">
-            <span className="text-8xl sm:text-9xl font-black font-mono tracking-tighter text-white select-none">
+          <div className="my-6 sm:my-8 text-center">
+            <span className="text-8xl sm:text-9xl font-black font-mono tracking-tighter text-slate-900 dark:text-white select-none">
               {match.score_team2}
             </span>
           </div>
@@ -361,10 +361,10 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
           <button
             onClick={() => handleRallyWon(2)}
             disabled={match.is_completed || loading}
-            className={`w-full py-4 sm:py-5 rounded-2xl text-base font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
+            className={`w-full py-4 sm:py-5 rounded-2xl text-base font-bold uppercase tracking-wider transition-all shadow-xs active:scale-95 flex items-center justify-center gap-2 ${
               match.is_completed
-                ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                : "bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-sky-500/20"
+                ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/15"
             }`}
           >
             <Check className="w-5 h-5 stroke-[3]" />
@@ -375,34 +375,34 @@ export const LiveScoreTracker: React.FC<LiveScoreTrackerProps> = ({
       </div>
 
       {/* Courtside Control Strip */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-xs transition-colors">
         <div className="flex items-center gap-2">
           <button
             onClick={handleUndo}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700 active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 active:scale-95"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
             <span>Undo Point</span>
           </button>
 
           <button
             onClick={handleReset}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold transition-all border border-rose-500/20 active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-bold transition-all border border-rose-200 dark:border-rose-500/20 active:scale-95"
           >
             <span>Reset 0-0</span>
           </button>
         </div>
 
         {lastAction && (
-          <span className="text-xs text-slate-400 italic truncate">
+          <span className="text-xs text-slate-600 dark:text-slate-400 italic truncate">
             {lastAction}
           </span>
         )}
 
         <div className="text-xs text-slate-500 hidden sm:block">
-          Hotkeys: <kbd className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300">1</kbd> Team 1 • <kbd className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300">2</kbd> Team 2 • <kbd className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300">Ctrl+Z</kbd> Undo
+          Hotkeys: <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-mono">1</kbd> Team 1 • <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-mono">2</kbd> Team 2
         </div>
       </div>
 

@@ -83,47 +83,47 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl my-8 transition-colors">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <Swords className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white tracking-tight">New Match</h3>
-              <p className="text-xs text-slate-400">Set up players and scoring rules</p>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">New Match</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Set up players and scoring rules</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-white text-lg font-bold p-1"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg font-bold p-1 transition-colors"
           >
             ✕
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold text-center">
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-semibold text-center">
             {error}
           </div>
         )}
 
         {friends.length === 0 ? (
-          <div className="py-8 text-center bg-slate-950 border border-slate-800/80 rounded-2xl p-6 mb-4">
-            <Users className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-            <h4 className="text-base font-bold text-white mb-1">Add Friends First</h4>
-            <p className="text-xs text-slate-400 mb-4">
-              You need at least 1 friend in your list to start a singles or doubles match.
+          <div className="py-8 text-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 mb-4">
+            <Users className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
+            <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1">Add Friends First</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              You need at least 1 friend in your directory to start a singles or doubles match.
             </p>
             <button
               onClick={() => {
                 onClose();
                 onOpenAddFriend();
               }}
-              className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md"
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md"
             >
               + Add Friend Now
             </button>
@@ -133,32 +133,32 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
             
             {/* 1. Singles vs Doubles Segmented Control */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
                 Match Format
               </label>
-              <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-2xl border border-slate-800">
+              <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setMatchType("singles")}
-                  className={`py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                  className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
                     matchType === "singles"
-                      ? "bg-emerald-500 text-slate-950 shadow-md"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700/60"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
-                  <User className="w-4 h-4" />
+                  <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>1 vs 1 (Singles)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setMatchType("doubles")}
-                  className={`py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                  className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
                     matchType === "doubles"
-                      ? "bg-emerald-500 text-slate-950 shadow-md"
-                      : "text-slate-400 hover:text-white"
+                      ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700/60"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
-                  <Users className="w-4 h-4" />
+                  <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>2 vs 2 (Doubles)</span>
                 </button>
               </div>
@@ -168,30 +168,30 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
             <div className="space-y-3.5">
               
               {/* Team 1 */}
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400 block mb-2">
+              <div className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
+                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block mb-2">
                   Team 1 (Your Team)
                 </span>
                 
-                <div className="flex items-center justify-between mb-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-white">
+                <div className="flex items-center justify-between mb-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white shadow-xs">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     <span>You ({currentUser.name})</span>
                   </div>
-                  <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                  <span className="text-[10px] font-mono font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/40">
                     DUPR {currentUser.dupr_doubles_rating ? currentUser.dupr_doubles_rating.toFixed(2) : "3.50"}
                   </span>
                 </div>
 
                 {matchType === "doubles" && (
                   <div>
-                    <label className="block text-[11px] text-slate-400 font-medium mb-1">
+                    <label className="block text-[11px] text-slate-600 dark:text-slate-400 font-semibold mb-1">
                       Pick Your Partner:
                     </label>
                     <select
                       value={partner}
                       onChange={(e) => setPartner(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                     >
                       <option value="">-- Choose Partner from Friends --</option>
                       {friends.map((f) => (
@@ -205,20 +205,20 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
               </div>
 
               {/* Team 2 */}
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
-                <span className="text-[11px] font-black uppercase tracking-widest text-sky-400 block mb-2">
+              <div className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
+                <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 dark:text-sky-400 block mb-2">
                   Team 2 (Opponents)
                 </span>
 
                 <div className="space-y-2.5">
                   <div>
-                    <label className="block text-[11px] text-slate-400 font-medium mb-1">
+                    <label className="block text-[11px] text-slate-600 dark:text-slate-400 font-semibold mb-1">
                       {matchType === "singles" ? "Pick Opponent:" : "Opponent 1:"}
                     </label>
                     <select
                       value={opponent1}
                       onChange={(e) => setOpponent1(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-sky-500"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                     >
                       <option value="">-- Choose Opponent --</option>
                       {friends.map((f) => (
@@ -231,13 +231,13 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
 
                   {matchType === "doubles" && (
                     <div>
-                      <label className="block text-[11px] text-slate-400 font-medium mb-1">
+                      <label className="block text-[11px] text-slate-600 dark:text-slate-400 font-semibold mb-1">
                         Opponent 2:
                       </label>
                       <select
                         value={opponent2}
                         onChange={(e) => setOpponent2(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-sky-500"
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
                       >
                         <option value="">-- Choose Opponent 2 --</option>
                         {friends.map((f) => (
@@ -256,19 +256,19 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
             {/* 3. Scoring Rules */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                   Play To
                 </label>
-                <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
                   {[11, 15, 21].map((pts) => (
                     <button
                       type="button"
                       key={pts}
                       onClick={() => setTargetPoints(pts)}
-                      className={`py-1.5 rounded-lg text-xs font-black transition-all ${
+                      className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
                         targetPoints === pts
-                          ? "bg-emerald-500 text-slate-950"
-                          : "text-slate-400 hover:text-white"
+                          ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700/60"
+                          : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       {pts}
@@ -278,17 +278,17 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                   Scoring Style
                 </label>
-                <div className="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => setScoringMode("sideout")}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
                       scoringMode === "sideout"
-                        ? "bg-emerald-500 text-slate-950"
-                        : "text-slate-400 hover:text-white"
+                        ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700/60"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     Side-Out
@@ -298,8 +298,8 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
                     onClick={() => setScoringMode("rally")}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
                       scoringMode === "rally"
-                        ? "bg-emerald-500 text-slate-950"
-                        : "text-slate-400 hover:text-white"
+                        ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700/60"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     Rally
@@ -312,9 +312,9 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm uppercase tracking-wider transition-all shadow-xl shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm tracking-wide transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center justify-center gap-2"
               >
-                <Play className="w-5 h-5 fill-slate-950" />
+                <Play className="w-4 h-4 fill-white text-white" />
                 <span>{loading ? "Starting..." : "Start Match & Go Courtside"}</span>
               </button>
             </div>
