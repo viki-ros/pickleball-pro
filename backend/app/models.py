@@ -104,3 +104,24 @@ class Match(Base):
     team1_player2 = relationship("Player", foreign_keys=[team1_player2_id])
     team2_player1 = relationship("Player", foreign_keys=[team2_player1_id])
     team2_player2 = relationship("Player", foreign_keys=[team2_player2_id])
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    phone = Column(String(50), unique=True, nullable=False, index=True)
+    avatar_color = Column(String(20), default="#10b981")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Friend(Base):
+    __tablename__ = "friends"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_phone = Column(String(50), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    phone = Column(String(50), nullable=False)
+    skill_level = Column(String(50), default="Casual")
+    avatar_color = Column(String(20), default="#3b82f6")
+    created_at = Column(DateTime, default=datetime.utcnow)
+

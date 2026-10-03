@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal
 from .models import Player, Court, Match, Tournament
-from .routers import players, courts, matches, tournaments
+from .routers import players, courts, matches, tournaments, friends
 
 Base.metadata.create_all(bind=engine)
 
@@ -21,6 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(friends.router)
 app.include_router(players.router)
 app.include_router(courts.router)
 app.include_router(matches.router)

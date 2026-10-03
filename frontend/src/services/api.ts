@@ -1,160 +1,130 @@
-import { Match, Player, Court, CourtBooking, Tournament } from "../types";
+import { UserProfile, Friend, Match, UserOverallStats } from "../types";
 import { localStore } from "./localStore";
 
 const API_BASE = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : "";
 
-export async function fetchMatches(): Promise<Match[]> {
-  try {
-    const res = await fetch(`${API_BASE}/api/matches`);
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, using local storage fallback for matches", err);
-  }
-  return localStore.getMatches();
+// USER PROFILE
+export async function getUserProfile(): Promise<UserProfile | null> {
+  return localStore.getUser();
 }
 
-export async function fetchMatch(id: number): Promise<Match> {
+export async function saveUserProfile(name: string, phone: string): Promise<UserProfile> {
+  const profile = localStore.registerUser(name, phone);
+  try {
+    await fetch(`${API_BASE}/api/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, phone }),
+    });
+  } catch (e) {
+    // offline/static mode
+  }
+  return profile;
+}
+
+export async function logoutUserProfile(): Promise<void> {
+  localStore.logoutUser();
+}
+
+// FRIENDS
+export async function fetchFriends(userPhone?: string): Promise<Friend[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/friends?user_phone=${encodeURIComponent(userPhone || "")}`);
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return localStore.getFriends(userPhone);
+}
+
+export async function addFriend(userPhone: string, name: string, phone: string, skillLevel: "Casual" | "Intermediate" | "Advanced" = "Casual"): Promise<Friend> {
+  const friend = localStore.addFriend(userPhone, name, phone, skillLevel);
+  try {
+    await fetch(`${API_BASE}/api/friends`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_phone: userPhone, name, phone, skill_level: skillLevel }),
+    });
+  } catch (e) {}
+  return friend;
+}
+
+export async function removeFriend(friendId: string): Promise<void> {
+  localStore.deleteFriend(friendId);
+  try {
+    await fetch(`${API_BASE}/api/friends/${friendId}`, { method: "DELETE" });
+  } catch (e) {}
+}
+
+// MATCHES
+export async function fetchMatches(userPhone?: string): Promise<Match[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/matches?user_phone=${encodeURIComponent(userPhone || "")}`);
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return localStore.getMatches(userPhone);
+}
+
+export async function fetchMatch(id: number): Promise<Match | null> {
   try {
     const res = await fetch(`${API_BASE}/api/matches/${id}`);
     if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, using local storage fallback for match", err);
-  }
+  } catch (e) {}
   return localStore.getMatch(id);
 }
 
-export async function createMatch(data: Partial<Match>): Promise<Match> {
+export async function createMatch(params: {
+  title?: string;
+  match_type: "singles" | "doubles";
+  scoring_mode: "sideout" | "rally";
+  target_points: number;
+  win_by: number;
+  user_phone: string;
+  team1_player_names: string[];
+  team2_player_names: string[];
+}): Promise<Match> {
+  const match = localStore.createMatch(params);
   try {
-    const res = await fetch(`${API_BASE}/api/matches`, {
+    await fetch(`${API_BASE}/api/matches`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(params),
     });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, creating match locally", err);
-  }
-  return localStore.createMatch(data);
+  } catch (e) {}
+  return match;
 }
 
 export async function recordRally(matchId: number, winningTeam: 1 | 2): Promise<Match> {
+  const updated = localStore.recordRally(matchId, winningTeam);
   try {
-    const res = await fetch(`${API_BASE}/api/matches/${matchId}/rally`, {
+    await fetch(`${API_BASE}/api/matches/${matchId}/rally`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ winning_team: winningTeam }),
     });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, recording rally locally", err);
-  }
-  return localStore.recordRally(matchId, winningTeam);
+  } catch (e) {}
+  return updated;
 }
 
 export async function undoRally(matchId: number): Promise<Match> {
+  const updated = localStore.undoRally(matchId);
   try {
-    const res = await fetch(`${API_BASE}/api/matches/${matchId}/undo`, {
-      method: "POST",
-    });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, undoing rally locally", err);
-  }
-  return localStore.undoRally(matchId);
+    await fetch(`${API_BASE}/api/matches/${matchId}/undo`, { method: "POST" });
+  } catch (e) {}
+  return updated;
 }
 
 export async function resetMatch(matchId: number): Promise<Match> {
+  const updated = localStore.resetMatch(matchId);
   try {
-    const res = await fetch(`${API_BASE}/api/matches/${matchId}/reset`, {
-      method: "POST",
-    });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, resetting match locally", err);
-  }
-  return localStore.resetMatch(matchId);
+    await fetch(`${API_BASE}/api/matches/${matchId}/reset`, { method: "POST" });
+  } catch (e) {}
+  return updated;
 }
 
-export async function fetchPlayers(): Promise<Player[]> {
+// STATS
+export async function fetchUserStats(userName: string, userPhone?: string): Promise<UserOverallStats> {
   try {
-    const res = await fetch(`${API_BASE}/api/players`);
+    const res = await fetch(`${API_BASE}/api/stats?user_phone=${encodeURIComponent(userPhone || "")}`);
     if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, fetching players locally", err);
-  }
-  return localStore.getPlayers();
-}
-
-export async function createPlayer(data: { name: string; rating: number; preferred_side: string }): Promise<Player> {
-  try {
-    const res = await fetch(`${API_BASE}/api/players`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, creating player locally", err);
-  }
-  return localStore.createPlayer(data);
-}
-
-export async function fetchCourts(): Promise<Court[]> {
-  try {
-    const res = await fetch(`${API_BASE}/api/courts`);
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, fetching courts locally", err);
-  }
-  return localStore.getCourts();
-}
-
-export async function bookCourt(courtId: number, data: { player_name: string; start_time: string; end_time: string; notes?: string }): Promise<CourtBooking> {
-  try {
-    const res = await fetch(`${API_BASE}/api/courts/${courtId}/book`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, booking court locally", err);
-  }
-  return localStore.bookCourt(courtId, data);
-}
-
-export async function cancelBooking(bookingId: number): Promise<{ message: string }> {
-  try {
-    const res = await fetch(`${API_BASE}/api/courts/bookings/${bookingId}`, {
-      method: "DELETE",
-    });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, cancelling booking locally", err);
-  }
-  return localStore.cancelBooking(bookingId);
-}
-
-export async function fetchTournaments(): Promise<Tournament[]> {
-  try {
-    const res = await fetch(`${API_BASE}/api/tournaments`);
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, fetching tournaments locally", err);
-  }
-  return localStore.getTournaments();
-}
-
-export async function createTournament(data: Partial<Tournament>): Promise<Tournament> {
-  try {
-    const res = await fetch(`${API_BASE}/api/tournaments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.debug("Backend unreachable, creating tournament locally", err);
-  }
-  return localStore.createTournament(data);
+  } catch (e) {}
+  return localStore.getUserStats(userName, userPhone);
 }

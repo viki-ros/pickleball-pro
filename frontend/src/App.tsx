@@ -1,185 +1,309 @@
 import React, { useState, useEffect } from "react";
 import { Navbar } from "./components/Navbar";
 import { LiveScoreTracker } from "./components/LiveScoreTracker";
-import { TournamentBracket } from "./components/TournamentBracket";
-import { CourtBookingGrid } from "./components/CourtBookingGrid";
-import { PlayerStatsCard } from "./components/PlayerStatsCard";
-import { NewMatchModal } from "./components/NewMatchModal";
-import { Match, Player, Court, Tournament } from "./types";
-import { fetchMatches, fetchPlayers, fetchCourts, fetchTournaments } from "./services/api";
-import { Activity, Plus, RefreshCw } from "lucide-react";
+import { FriendsView } from "./components/FriendsView";
+import { StatsView } from "./components/StatsView";
+import { ProfileView } from "./components/ProfileView";
+import { AuthModal } from "./components/AuthModal";
+import { CreateMatchModal } from "./components/CreateMatchModal";
+import { UserProfile, Friend, Match, UserOverallStats } from "./types";
+import {
+  getUserProfile,
+  saveUserProfile,
+  logoutUserProfile,
+  fetchFriends,
+  addFriend,
+  removeFriend,
+  fetchMatches,
+  createMatch,
+  fetchUserStats,
+} from "./services/api";
+import { Swords, Plus, History } from "lucide-react";
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<"match" | "tournaments" | "courts" | "players">("match");
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"match" | "friends" | "stats" | "profile">("match");
+
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [showNewMatchModal, setShowNewMatchModal] = useState<boolean>(false);
+  const [userStats, setUserStats] = useState<UserOverallStats>({
+    total_matches: 0,
+    wins: 0,
+    losses: 0,
+    win_rate: 0,
+    streak: 0,
+    points_scored: 0,
+    points_conceded: 0,
+    head_to_head: [],
+    history: [],
+  });
+
+  const [showCreateMatchModal, setShowCreateMatchModal] = useState<boolean>(false);
+  const [preselectedFriend, setPreselectedFriend] = useState<Friend | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const loadAllData = async () => {
+  // Load User & Core Data
+  const loadData = async () => {
     try {
       setLoading(true);
-      const [mList, pList, cList, tList] = await Promise.all([
-        fetchMatches(),
-        fetchPlayers(),
-        fetchCourts(),
-        fetchTournaments(),
-      ]);
-      setMatches(mList);
-      setPlayers(pList);
-      setCourts(cList);
-      setTournaments(tList);
+      const user = await getUserProfile();
+      setCurrentUser(user);
 
-      if (mList.length > 0) {
-        // Keep current selected match or default to first
-        setCurrentMatch((prev) => (prev ? mList.find((m) => m.id === prev.id) || mList[0] : mList[0]));
+      if (!user) {
+        setShowAuthModal(true);
+        return;
+      }
+
+      const [friendList, matchList, stats] = await Promise.all([
+        fetchFriends(user.phone),
+        fetchMatches(user.phone),
+        fetchUserStats(user.name, user.phone),
+      ]);
+
+      setFriends(friendList);
+      setMatches(matchList);
+      setUserStats(stats);
+
+      // Set active match
+      const inProgressMatch = matchList.find((m) => !m.is_completed);
+      if (inProgressMatch) {
+        setCurrentMatch(inProgressMatch);
+      } else if (matchList.length > 0) {
+        setCurrentMatch(matchList[0]);
       }
     } catch (err) {
-      console.error("Error loading pickleball data:", err);
+      console.error("Error loading app data:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAllData();
+    loadData();
   }, []);
 
+  // Save Registration / Profile Edit
+  const handleSaveProfile = async (name: string, phone: string) => {
+    const user = await saveUserProfile(name, phone);
+    setCurrentUser(user);
+    setShowAuthModal(false);
+    loadData();
+  };
+
+  // Logout
+  const handleLogout = async () => {
+    if (window.confirm("Switch to a different name / phone number?")) {
+      await logoutUserProfile();
+      setCurrentUser(null);
+      setShowAuthModal(true);
+    }
+  };
+
+  // Add Friend
+  const handleAddFriend = async (
+    name: string,
+    phone: string,
+    skill: "Casual" | "Intermediate" | "Advanced"
+  ) => {
+    if (!currentUser) return;
+    const newFriend = await addFriend(currentUser.phone, name, phone, skill);
+    setFriends([...friends, newFriend]);
+    refreshStats();
+  };
+
+  // Delete Friend
+  const handleDeleteFriend = async (id: string) => {
+    if (window.confirm("Remove this friend from your list?")) {
+      await removeFriend(id);
+      setFriends(friends.filter((f) => f.id !== id));
+      refreshStats();
+    }
+  };
+
+  // Start match with a specific friend from directory
+  const handleStartMatchWithFriend = (friend: Friend) => {
+    setPreselectedFriend(friend);
+    setShowCreateMatchModal(true);
+  };
+
+  // When a new match is created
   const handleMatchCreated = (newMatch: Match) => {
     setMatches([newMatch, ...matches]);
     setCurrentMatch(newMatch);
     setActiveTab("match");
+    refreshStats();
   };
 
+  // When match points change
   const handleMatchUpdate = (updatedMatch: Match) => {
     setCurrentMatch(updatedMatch);
-    setMatches(matches.map((m) => (m.id === updatedMatch.id ? updatedMatch : m)));
+    setMatches((prev) => prev.map((m) => (m.id === updatedMatch.id ? updatedMatch : m)));
+    refreshStats();
+  };
+
+  // Refresh stats after match change
+  const refreshStats = async () => {
+    if (!currentUser) return;
+    const stats = await fetchUserStats(currentUser.name, currentUser.phone);
+    setUserStats(stats);
+  };
+
+  // Reset demo data
+  const handleResetAllData = () => {
+    if (window.confirm("Are you sure you want to clear your local matches and reset?")) {
+      localStorage.clear();
+      window.location.reload();
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950 font-sans antialiased">
       
-      {/* Navigation */}
+      {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenNewMatch={() => setShowNewMatchModal(true)}
-        liveMatchTitle={currentMatch?.title}
+        currentUser={currentUser}
+        onOpenNewMatch={() => {
+          setPreselectedFriend(null);
+          setShowCreateMatchModal(true);
+        }}
+        onOpenProfile={() => setActiveTab("profile")}
+        hasActiveMatch={Boolean(currentMatch && !currentMatch.is_completed)}
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         
-        {/* Match Switcher Toolbar when on Match tab */}
-        {activeTab === "match" && matches.length > 1 && (
-          <div className="mb-6 flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2.5 overflow-x-auto">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
-                Select Active Match:
-              </span>
-              <div className="flex items-center gap-2 overflow-x-auto">
-                {matches.slice(0, 6).map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => setCurrentMatch(m)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                      currentMatch?.id === m.id
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                        : "bg-slate-800/60 text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    #{m.id}: {m.title.length > 20 ? m.title.slice(0, 20) + "..." : m.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={loadAllData}
-              title="Refresh Data"
-              className="p-1.5 text-slate-400 hover:text-emerald-400 transition-colors ml-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Views */}
-        {loading && matches.length === 0 ? (
+        {loading && !currentUser ? (
           <div className="py-24 text-center">
-            <div className="w-12 h-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin mx-auto mb-4" />
-            <p className="text-slate-400 text-sm">Connecting to court server...</p>
+            <div className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin mx-auto mb-4" />
+            <p className="text-slate-400 text-xs">Opening Pickleball Tracker...</p>
           </div>
         ) : (
           <>
+            {/* TAB 1: MATCH / LIVE SCORING */}
             {activeTab === "match" && (
               currentMatch ? (
-                <LiveScoreTracker
-                  match={currentMatch}
-                  onMatchUpdate={handleMatchUpdate}
-                />
+                <div>
+                  {/* Match Switcher if multiple matches exist */}
+                  {matches.length > 1 && (
+                    <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        Matches:
+                      </span>
+                      {matches.slice(0, 5).map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => setCurrentMatch(m)}
+                          className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                            currentMatch.id === m.id
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                              : "bg-slate-900 text-slate-400 border-slate-800 hover:text-white"
+                          }`}
+                        >
+                          {m.is_completed ? "✓ " : "🎾 "}
+                          {m.title.length > 22 ? m.title.slice(0, 22) + "..." : m.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <LiveScoreTracker
+                    match={currentMatch}
+                    onMatchUpdate={handleMatchUpdate}
+                    onFinishMatch={() => setActiveTab("stats")}
+                  />
+                </div>
               ) : (
-                <div className="text-center py-20 bg-slate-900/50 border border-slate-800 rounded-2xl p-8">
-                  <h3 className="text-xl font-bold text-white mb-2">No Active Matches Found</h3>
-                  <p className="text-slate-400 text-sm mb-6">
-                    Start a new singles or doubles match with official side-out scoring.
+                /* No Active Match: Empty state with start button */
+                <div className="text-center py-20 px-6 bg-slate-900 border border-slate-800 rounded-3xl max-w-lg mx-auto shadow-sm">
+                  <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl mx-auto mb-4">
+                    🏓
+                  </div>
+                  <h3 className="text-xl font-black text-white tracking-tight mb-1.5">
+                    Ready to Play?
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto mb-6">
+                    Start a new singles (1v1) or doubles (2v2) match with your friends. Points and stats will automatically calculate.
                   </p>
                   <button
-                    onClick={() => setShowNewMatchModal(true)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl shadow-lg"
+                    onClick={() => {
+                      setPreselectedFriend(null);
+                      setShowCreateMatchModal(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-4 h-4 stroke-[3]" />
                     <span>Create Match Now</span>
                   </button>
                 </div>
               )
             )}
 
-            {activeTab === "tournaments" && (
-              <TournamentBracket
-                tournaments={tournaments}
+            {/* TAB 2: FRIENDS DIRECTORY */}
+            {activeTab === "friends" && (
+              <FriendsView
+                friends={friends}
+                headToHeadStats={userStats.head_to_head}
+                onAddFriend={handleAddFriend}
+                onDeleteFriend={handleDeleteFriend}
+                onStartMatchWithFriend={handleStartMatchWithFriend}
+              />
+            )}
+
+            {/* TAB 3: STATS & HISTORY */}
+            {activeTab === "stats" && currentUser && (
+              <StatsView
+                currentUser={currentUser}
+                stats={userStats}
                 onSelectMatch={(m) => {
                   setCurrentMatch(m);
                   setActiveTab("match");
                 }}
-                onRefresh={loadAllData}
+                onStartNewMatch={() => {
+                  setPreselectedFriend(null);
+                  setShowCreateMatchModal(true);
+                }}
               />
             )}
 
-            {activeTab === "courts" && (
-              <CourtBookingGrid
-                courts={courts}
-                onRefresh={loadAllData}
-              />
-            )}
-
-            {activeTab === "players" && (
-              <PlayerStatsCard
-                players={players}
-                onRefresh={loadAllData}
+            {/* TAB 4: PROFILE & SETTINGS */}
+            {activeTab === "profile" && currentUser && (
+              <ProfileView
+                currentUser={currentUser}
+                onEditProfile={() => setShowAuthModal(true)}
+                onLogout={handleLogout}
+                onResetAllData={handleResetAllData}
               />
             )}
           </>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-600">
-        <p>Pickleball Pro • Official Side-Out & Rally Scoring Engine • Regulation 20' × 44' Court Staging</p>
-      </footer>
-
-      {/* New Match Modal */}
-      <NewMatchModal
-        isOpen={showNewMatchModal}
-        onClose={() => setShowNewMatchModal(false)}
-        players={players}
-        courts={courts}
-        onMatchCreated={handleMatchCreated}
+      {/* Auth / Profile Registration Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        currentUser={currentUser}
+        onSave={handleSaveProfile}
+        onClose={currentUser ? () => setShowAuthModal(false) : undefined}
       />
+
+      {/* Create Match Modal */}
+      {currentUser && (
+        <CreateMatchModal
+          isOpen={showCreateMatchModal}
+          currentUser={currentUser}
+          friends={friends}
+          initialFriend={preselectedFriend}
+          onClose={() => setShowCreateMatchModal(false)}
+          onMatchCreated={handleMatchCreated}
+          onCreateMatchApi={createMatch}
+          onOpenAddFriend={() => setActiveTab("friends")}
+        />
+      )}
 
     </div>
   );
