@@ -34,3 +34,4 @@ frontend/.pnpm-store/
 .DS_Store
 Thumbs.db
 *.log
+hf_space_dist/
