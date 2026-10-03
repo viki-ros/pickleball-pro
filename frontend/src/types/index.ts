@@ -4,6 +4,10 @@ export interface UserProfile {
   phone: string;
   avatar_color: string;
   created_at: string;
+  dupr_id?: string;
+  dupr_doubles_rating?: number;
+  dupr_singles_rating?: number;
+  dupr_verified?: boolean;
 }
 
 export interface Friend {
@@ -14,6 +18,10 @@ export interface Friend {
   avatar_color: string;
   skill_level?: "Casual" | "Intermediate" | "Advanced";
   created_at: string;
+  dupr_id?: string;
+  dupr_doubles_rating?: number;
+  dupr_singles_rating?: number;
+  dupr_verified?: boolean;
 }
 
 export interface Match {
@@ -24,8 +32,8 @@ export interface Match {
   target_points: number;
   win_by: number;
   user_phone?: string;
-  team1_player_names: string[]; // e.g. ["You", "Dave"] or ["Alex"]
-  team2_player_names: string[]; // e.g. ["Sarah", "Mike"] or ["John"]
+  team1_player_names: string[];
+  team2_player_names: string[];
   score_team1: number;
   score_team2: number;
   serving_team: 1 | 2;
@@ -39,6 +47,8 @@ export interface Match {
   score_call?: string;
   created_at: string;
   finished_at?: string;
+  dupr_status?: "not_submitted" | "pending" | "submitted";
+  dupr_match_id?: string;
 }
 
 export interface HeadToHeadStat {
@@ -60,4 +70,12 @@ export interface UserOverallStats {
   points_conceded: number;
   head_to_head: HeadToHeadStat[];
   history: Match[];
+}
+
+export interface DuprConfig {
+  client_key?: string;
+  client_secret?: string;
+  environment: "production" | "uat";
+  club_id?: string;
+  auto_sync: boolean;
 }

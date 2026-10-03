@@ -1,6 +1,7 @@
-import React from "react";
-import { UserProfile } from "../types";
-import { User, Phone, LogOut, Smartphone, ShieldCheck, RefreshCw } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { UserProfile, DuprConfig } from "../types";
+import { User, Phone, LogOut, Smartphone, Award, ExternalLink, Settings, Check, RefreshCw } from "lucide-react";
+import { getDuprConfig, saveDuprConfig } from "../services/api";
 
 interface ProfileViewProps {
   currentUser: UserProfile;
@@ -15,6 +16,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onLogout,
   onResetAllData,
 }) => {
+  const [duprConfig, setDuprConfig] = useState<DuprConfig>({
+    environment: "uat",
+    auto_sync: false,
+  });
+  const [showConfig, setShowConfig] = useState<boolean>(false);
+  const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    getDuprConfig().then(setDuprConfig);
+  }, []);
+
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveDuprConfig(duprConfig);
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 3000);
+  };
+
   return (
     <div className="max-w-xl mx-auto space-y-6 animate-fade-in pb-16">
       
@@ -46,7 +65,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             onClick={onEditProfile}
             className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-all border border-slate-700 active:scale-95"
           >
-            Edit Profile
+            Edit Profile & DUPR
           </button>
           <button
             onClick={onLogout}
@@ -56,6 +75,167 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <span>Switch Account</span>
           </button>
         </div>
+      </div>
+
+      {/* DUPR Rating Card */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950/40 border border-blue-500/30 rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center">
+              <Award className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
+                <span>Official DUPR Ratings</span>
+                {currentUser.dupr_verified && (
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-blue-500 text-slate-950 px-2 py-0.5 rounded-full">
+                    Verified
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-slate-400">
+                Dynamic Universal Pickleball Rating (mydupr.com)
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://mydupr.com"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold"
+          >
+            <span>mydupr.com</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+
+        {/* DUPR ID & Ratings Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              Doubles DUPR
+            </span>
+            <span className="text-3xl font-black text-blue-400 font-mono tracking-tight">
+              {currentUser.dupr_doubles_rating ? currentUser.dupr_doubles_rating.toFixed(2) : "3.50"}
+            </span>
+            <span className="text-[10px] text-slate-500 block mt-1">
+              {currentUser.dupr_id ? `ID: ${currentUser.dupr_id}` : "Unlinked"}
+            </span>
+          </div>
+
+          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-center">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+              Singles DUPR
+            </span>
+            <span className="text-3xl font-black text-sky-400 font-mono tracking-tight">
+              {currentUser.dupr_singles_rating ? currentUser.dupr_singles_rating.toFixed(2) : "3.50"}
+            </span>
+            <span className="text-[10px] text-slate-500 block mt-1">
+              Standard 1v1
+            </span>
+          </div>
+        </div>
+
+        {/* DUPR Partner API Settings Toggle */}
+        <button
+          onClick={() => setShowConfig(!showConfig)}
+          className="w-full py-2.5 px-3 rounded-xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold transition-all flex items-center justify-between"
+        >
+          <span className="flex items-center gap-1.5">
+            <Settings className="w-3.5 h-3.5 text-blue-400" />
+            <span>DUPR Partner API & Sync Settings</span>
+          </span>
+          <span className="text-slate-500">{showConfig ? "▲" : "▼"}</span>
+        </button>
+
+        {showConfig && (
+          <form onSubmit={handleSaveConfig} className="mt-4 pt-4 border-t border-slate-800/80 space-y-3 text-xs">
+            <div>
+              <label className="block text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-1">
+                API Environment
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDuprConfig({ ...duprConfig, environment: "uat" })}
+                  className={`py-2 rounded-xl font-bold border transition-all ${
+                    duprConfig.environment === "uat"
+                      ? "bg-blue-500 text-slate-950 border-blue-400"
+                      : "bg-slate-950 text-slate-400 border-slate-800"
+                  }`}
+                >
+                  UAT Sandbox (uat.mydupr.com)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDuprConfig({ ...duprConfig, environment: "production" })}
+                  className={`py-2 rounded-xl font-bold border transition-all ${
+                    duprConfig.environment === "production"
+                      ? "bg-blue-500 text-slate-950 border-blue-400"
+                      : "bg-slate-950 text-slate-400 border-slate-800"
+                  }`}
+                >
+                  Production (mydupr.com)
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-1">
+                DUPR Client Key (Optional for Partner Clubs)
+              </label>
+              <input
+                type="text"
+                value={duprConfig.client_key || ""}
+                onChange={(e) => setDuprConfig({ ...duprConfig, client_key: e.target.value })}
+                placeholder="Partner Client Key"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 font-bold uppercase tracking-wider text-[10px] mb-1">
+                DUPR Client Secret
+              </label>
+              <input
+                type="password"
+                value={duprConfig.client_secret || ""}
+                onChange={(e) => setDuprConfig({ ...duprConfig, client_secret: e.target.value })}
+                placeholder="Partner Client Secret"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono outline-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="autoSync"
+                checked={duprConfig.auto_sync}
+                onChange={(e) => setDuprConfig({ ...duprConfig, auto_sync: e.target.checked })}
+                className="rounded border-slate-800 text-blue-500 focus:ring-0"
+              />
+              <label htmlFor="autoSync" className="text-slate-300 font-medium">
+                Auto-submit completed matches to DUPR
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5"
+            >
+              {savedSuccess ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-300" />
+                  <span>Settings Saved</span>
+                </>
+              ) : (
+                <span>Save DUPR Settings</span>
+              )}
+            </button>
+          </form>
+        )}
+
       </div>
 
       {/* App & Mobile Tips */}

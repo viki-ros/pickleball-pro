@@ -173,9 +173,14 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
                   Team 1 (Your Team)
                 </span>
                 
-                <div className="flex items-center gap-2 mb-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-white">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span>You ({currentUser.name})</span>
+                <div className="flex items-center justify-between mb-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-white">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span>You ({currentUser.name})</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                    DUPR {currentUser.dupr_doubles_rating ? currentUser.dupr_doubles_rating.toFixed(2) : "3.50"}
+                  </span>
                 </div>
 
                 {matchType === "doubles" && (
@@ -191,7 +196,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
                       <option value="">-- Choose Partner from Friends --</option>
                       {friends.map((f) => (
                         <option key={f.id} value={f.name}>
-                          {f.name} ({f.phone})
+                          {f.name} (DUPR {f.dupr_doubles_rating ? f.dupr_doubles_rating.toFixed(2) : "3.50"})
                         </option>
                       ))}
                     </select>
@@ -218,7 +223,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
                       <option value="">-- Choose Opponent --</option>
                       {friends.map((f) => (
                         <option key={f.id} value={f.name}>
-                          {f.name} ({f.phone})
+                          {f.name} (DUPR {f.dupr_doubles_rating ? f.dupr_doubles_rating.toFixed(2) : "3.50"})
                         </option>
                       ))}
                     </select>
@@ -237,7 +242,7 @@ export const CreateMatchModal: React.FC<CreateMatchModalProps> = ({
                         <option value="">-- Choose Opponent 2 --</option>
                         {friends.map((f) => (
                           <option key={f.id} value={f.name}>
-                            {f.name} ({f.phone})
+                            {f.name} (DUPR {f.dupr_doubles_rating ? f.dupr_doubles_rating.toFixed(2) : "3.50"})
                           </option>
                         ))}
                       </select>

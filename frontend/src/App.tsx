@@ -85,8 +85,14 @@ export function App() {
   }, []);
 
   // Save Registration / Profile Edit
-  const handleSaveProfile = async (name: string, phone: string) => {
-    const user = await saveUserProfile(name, phone);
+  const handleSaveProfile = async (
+    name: string,
+    phone: string,
+    duprId?: string,
+    doublesRating?: number,
+    singlesRating?: number
+  ) => {
+    const user = await saveUserProfile(name, phone, duprId, doublesRating, singlesRating);
     setCurrentUser(user);
     setShowAuthModal(false);
     loadData();
@@ -105,10 +111,21 @@ export function App() {
   const handleAddFriend = async (
     name: string,
     phone: string,
-    skill: "Casual" | "Intermediate" | "Advanced"
+    skill: "Casual" | "Intermediate" | "Advanced",
+    duprId?: string,
+    doublesRating?: number,
+    singlesRating?: number
   ) => {
     if (!currentUser) return;
-    const newFriend = await addFriend(currentUser.phone, name, phone, skill);
+    const newFriend = await addFriend(
+      currentUser.phone,
+      name,
+      phone,
+      skill,
+      duprId,
+      doublesRating,
+      singlesRating
+    );
     setFriends([...friends, newFriend]);
     refreshStats();
   };

@@ -112,6 +112,9 @@ class User(Base):
     name = Column(String(100), nullable=False)
     phone = Column(String(50), unique=True, nullable=False, index=True)
     avatar_color = Column(String(20), default="#10b981")
+    dupr_id = Column(String(50), nullable=True)
+    dupr_doubles_rating = Column(Float, default=3.5)
+    dupr_singles_rating = Column(Float, default=3.5)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Friend(Base):
@@ -122,6 +125,9 @@ class Friend(Base):
     name = Column(String(100), nullable=False)
     phone = Column(String(50), nullable=False)
     skill_level = Column(String(50), default="Casual")
+    dupr_id = Column(String(50), nullable=True)
+    dupr_doubles_rating = Column(Float, default=3.5)
+    dupr_singles_rating = Column(Float, default=3.5)
     avatar_color = Column(String(20), default="#3b82f6")
     created_at = Column(DateTime, default=datetime.utcnow)
 

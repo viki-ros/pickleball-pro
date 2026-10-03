@@ -1,20 +1,41 @@
 import React, { useState } from "react";
 import { UserProfile } from "../types";
-import { Phone, User, ArrowRight, ShieldCheck } from "lucide-react";
+import { Phone, User, ArrowRight, ShieldCheck, Award, ExternalLink } from "lucide-react";
+import { verifyDuprPlayer } from "../services/api";
 
 interface AuthModalProps {
   isOpen: boolean;
   currentUser: UserProfile | null;
-  onSave: (name: string, phone: string) => void;
+  onSave: (name: string, phone: string, duprId?: string, doublesRating?: number, singlesRating?: number) => void;
   onClose?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, currentUser, onSave, onClose }) => {
   const [name, setName] = useState<string>(currentUser?.name || "");
   const [phone, setPhone] = useState<string>(currentUser?.phone || "");
+  const [duprId, setDuprId] = useState<string>(currentUser?.dupr_id || "");
+  const [doublesRating, setDoublesRating] = useState<number>(currentUser?.dupr_doubles_rating || 3.5);
+  const [singlesRating, setSinglesRating] = useState<number>(currentUser?.dupr_singles_rating || 3.5);
   const [error, setError] = useState<string>("");
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [verifiedSuccess, setVerifiedSuccess] = useState<boolean>(Boolean(currentUser?.dupr_verified));
 
   if (!isOpen) return null;
+
+  const handleDuprLookup = async () => {
+    if (!duprId.trim()) return;
+    setIsVerifying(true);
+    try {
+      const res = await verifyDuprPlayer(duprId);
+      setDoublesRating(res.doublesRating);
+      setSinglesRating(res.singlesRating);
+      setVerifiedSuccess(true);
+    } catch {
+      setVerifiedSuccess(false);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,12 +48,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, currentUser, onSav
       return;
     }
     setError("");
-    onSave(name.trim(), phone.trim());
+    onSave(
+      name.trim(),
+      phone.trim(),
+      duprId.trim() || undefined,
+      doublesRating,
+      singlesRating
+    );
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative my-8">
         
         {/* Header Icon */}
         <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mx-auto mb-4 shadow-inner">
@@ -45,8 +72,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, currentUser, onSav
           </h2>
           <p className="text-sm text-slate-400 mt-1.5 leading-relaxed">
             {currentUser
-              ? "Update your name or contact number used for match records."
-              : "Register with your name and mobile number to start scoring matches with friends and tracking your stats."}
+              ? "Update your details and link your DUPR rating."
+              : "Register with your name and mobile number to start scoring matches with friends and syncing with DUPR."}
           </p>
         </div>
 
@@ -90,11 +117,86 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, currentUser, onSav
             </div>
             <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 inline" />
-              Used to associate matches with your friends. Stored safely.
+              Used to associate matches with your friends.
             </p>
           </div>
 
-          <div className="pt-2">
+          {/* DUPR Integration Section */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-blue-400" />
+                <span>Link DUPR Rating (Optional)</span>
+              </label>
+              <a
+                href="https://mydupr.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-slate-500 hover:text-blue-400 transition-colors flex items-center gap-1"
+              >
+                <span>Find ID</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={duprId}
+                onChange={(e) => {
+                  setDuprId(e.target.value);
+                  setVerifiedSuccess(false);
+                }}
+                placeholder="e.g. DUPR-7829 or 7GK482"
+                className="flex-1 bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 px-3 text-white text-sm outline-none transition-all placeholder:text-slate-600 font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleDuprLookup}
+                disabled={!duprId.trim() || isVerifying}
+                className="px-3 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all disabled:opacity-50"
+              >
+                {isVerifying ? "Verifying..." : "Verify"}
+              </button>
+            </div>
+
+            {/* DUPR Rating Preview */}
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 font-medium">Doubles DUPR</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="2.0"
+                  max="6.5"
+                  value={doublesRating}
+                  onChange={(e) => setDoublesRating(parseFloat(e.target.value) || 3.5)}
+                  className="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-right text-xs font-black text-blue-400 font-mono"
+                />
+              </div>
+
+              <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 font-medium">Singles DUPR</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="2.0"
+                  max="6.5"
+                  value={singlesRating}
+                  onChange={(e) => setSinglesRating(parseFloat(e.target.value) || 3.5)}
+                  className="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-right text-xs font-black text-sky-400 font-mono"
+                />
+              </div>
+            </div>
+
+            {verifiedSuccess && (
+              <p className="text-[11px] text-emerald-400 mt-1.5 flex items-center gap-1">
+                ✓ DUPR profile linked: Ratings active on all match scorecards.
+              </p>
+            )}
+          </div>
+
+          <div className="pt-3">
             <button
               type="submit"
               className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"

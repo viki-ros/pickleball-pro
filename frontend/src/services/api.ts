@@ -1,4 +1,4 @@
-import { UserProfile, Friend, Match, UserOverallStats } from "../types";
+import { UserProfile, Friend, Match, UserOverallStats, DuprConfig } from "../types";
 import { localStore } from "./localStore";
 
 const API_BASE = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : "";
@@ -8,18 +8,32 @@ export async function getUserProfile(): Promise<UserProfile | null> {
   return localStore.getUser();
 }
 
-export async function saveUserProfile(name: string, phone: string): Promise<UserProfile> {
-  const profile = localStore.registerUser(name, phone);
+export async function saveUserProfile(
+  name: string,
+  phone: string,
+  duprId?: string,
+  doublesRating?: number,
+  singlesRating?: number
+): Promise<UserProfile> {
+  const profile = localStore.registerUser(name, phone, duprId, doublesRating, singlesRating);
   try {
     await fetch(`${API_BASE}/api/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone }),
+      body: JSON.stringify({ name, phone, dupr_id: duprId, doubles_rating: doublesRating, singles_rating: singlesRating }),
     });
-  } catch (e) {
-    // offline/static mode
-  }
+  } catch (e) {}
   return profile;
+}
+
+export async function updateUserDupr(
+  name: string,
+  phone: string,
+  duprId?: string,
+  doublesRating?: number,
+  singlesRating?: number
+): Promise<UserProfile> {
+  return localStore.updateUser(name, phone, duprId, doublesRating, singlesRating);
 }
 
 export async function logoutUserProfile(): Promise<void> {
@@ -35,16 +49,28 @@ export async function fetchFriends(userPhone?: string): Promise<Friend[]> {
   return localStore.getFriends(userPhone);
 }
 
-export async function addFriend(userPhone: string, name: string, phone: string, skillLevel: "Casual" | "Intermediate" | "Advanced" = "Casual"): Promise<Friend> {
-  const friend = localStore.addFriend(userPhone, name, phone, skillLevel);
+export async function addFriend(
+  userPhone: string,
+  name: string,
+  phone: string,
+  skillLevel: "Casual" | "Intermediate" | "Advanced" = "Casual",
+  duprId?: string,
+  doublesRating?: number,
+  singlesRating?: number
+): Promise<Friend> {
+  const friend = localStore.addFriend(userPhone, name, phone, skillLevel, duprId, doublesRating, singlesRating);
   try {
     await fetch(`${API_BASE}/api/friends`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_phone: userPhone, name, phone, skill_level: skillLevel }),
+      body: JSON.stringify({ user_phone: userPhone, name, phone, skill_level: skillLevel, dupr_id: duprId }),
     });
   } catch (e) {}
   return friend;
+}
+
+export async function updateFriend(friendId: string, data: Partial<Friend>): Promise<Friend | null> {
+  return localStore.updateFriend(friendId, data);
 }
 
 export async function removeFriend(friendId: string): Promise<void> {
@@ -127,4 +153,21 @@ export async function fetchUserStats(userName: string, userPhone?: string): Prom
     if (res.ok) return await res.json();
   } catch (e) {}
   return localStore.getUserStats(userName, userPhone);
+}
+
+// DUPR INTEGRATION API
+export async function verifyDuprPlayer(duprIdOrName: string) {
+  return localStore.verifyDuprPlayer(duprIdOrName);
+}
+
+export async function submitMatchToDupr(matchId: number) {
+  return localStore.submitMatchToDupr(matchId);
+}
+
+export async function getDuprConfig(): Promise<DuprConfig> {
+  return localStore.getDuprConfig();
+}
+
+export async function saveDuprConfig(config: DuprConfig): Promise<DuprConfig> {
+  return localStore.saveDuprConfig(config);
 }
