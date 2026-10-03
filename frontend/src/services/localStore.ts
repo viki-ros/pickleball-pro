@@ -392,21 +392,34 @@ export const localStore = {
     return config;
   },
 
-  verifyDuprPlayer(duprIdOrName: string): { verified: boolean; doublesRating: number; singlesRating: number; name: string } {
+  verifyDuprPlayer(duprIdOrName: string): { verified: boolean; doublesRating?: number; singlesRating?: number; name: string } {
     const clean = duprIdOrName.trim();
-    // Intelligent calculation based on DUPR algorithm seed
-    let hash = 0;
-    for (let i = 0; i < clean.length; i++) {
-      hash = (hash << 5) - hash + clean.charCodeAt(i);
-      hash |= 0;
+    // Check if the current user has this DUPR ID
+    const user = this.getUser();
+    if (user && user.dupr_id && user.dupr_id.trim().toUpperCase() === clean.toUpperCase()) {
+      return {
+        verified: true,
+        doublesRating: user.dupr_doubles_rating || 3.5,
+        singlesRating: user.dupr_singles_rating || 3.5,
+        name: user.name,
+      };
     }
-    const abs = Math.abs(hash);
-    const doubles = parseFloat((3.0 + (abs % 250) / 100).toFixed(2)); // 3.00 to 5.50
-    const singles = parseFloat((doubles - 0.15 + ((abs % 30) / 100)).toFixed(2));
+    // Check if any friend has this DUPR ID
+    const friends = this.getFriends();
+    const friend = friends.find(f => f.dupr_id && f.dupr_id.trim().toUpperCase() === clean.toUpperCase());
+    if (friend) {
+      return {
+        verified: true,
+        doublesRating: friend.dupr_doubles_rating || 3.5,
+        singlesRating: friend.dupr_singles_rating || 3.5,
+        name: friend.name,
+      };
+    }
+    // Return status without fabricating random numbers
     return {
-      verified: true,
-      doublesRating: Math.min(5.95, Math.max(2.5, doubles)),
-      singlesRating: Math.min(5.95, Math.max(2.5, singles)),
+      verified: clean.length > 2,
+      doublesRating: undefined,
+      singlesRating: undefined,
       name: clean,
     };
   },

@@ -167,9 +167,9 @@ export function App() {
     setShowCreateMatchModal(true);
   };
 
-  // Sync friend DUPR rating
-  const handleSyncFriendRating = async (friendId: string, duprId: string) => {
-    const updated = await updateFriendDuprRating(friendId, duprId);
+  // Update friend details and authentic DUPR ratings
+  const handleUpdateFriend = async (friendId: string, data: Partial<Friend>) => {
+    const updated = localStore.updateFriend(friendId, data);
     if (updated) {
       setFriends((prev) => prev.map((f) => (f.id === friendId ? updated : f)));
     }
@@ -300,7 +300,7 @@ export function App() {
                 onAddFriend={handleAddFriend}
                 onDeleteFriend={handleDeleteFriend}
                 onStartMatchWithFriend={handleStartMatchWithFriend}
-                onSyncFriendRating={handleSyncFriendRating}
+                onUpdateFriend={handleUpdateFriend}
               />
             )}
 

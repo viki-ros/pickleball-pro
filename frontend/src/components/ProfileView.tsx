@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { UserProfile } from "../types";
-import { Phone, LogOut, Smartphone, Award, ExternalLink, RefreshCw, Shield, Edit3 } from "lucide-react";
-import { verifyDuprPlayer, saveUserProfile } from "../services/api";
+import { Phone, LogOut, Smartphone, Award, ExternalLink, RefreshCw, Shield, Edit3, Check, X } from "lucide-react";
+import { saveUserProfile } from "../services/api";
 
 interface ProfileViewProps {
   currentUser: UserProfile;
@@ -18,36 +18,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onResetAllData,
   onUserUpdated,
 }) => {
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [syncStatus, setSyncStatus] = useState<string>("");
+  const [isEditingDupr, setIsEditingDupr] = useState<boolean>(false);
+  const [editDuprId, setEditDuprId] = useState<string>(currentUser.dupr_id || "");
+  const [editDoublesRating, setEditDoublesRating] = useState<number>(currentUser.dupr_doubles_rating || 3.5);
+  const [editSinglesRating, setEditSinglesRating] = useState<number>(currentUser.dupr_singles_rating || 3.5);
+  const [saveStatus, setSaveStatus] = useState<string>("");
 
-  const handleSyncDupr = async () => {
-    if (!currentUser.dupr_id) {
-      onEditProfile();
-      return;
-    }
-    try {
-      setIsSyncing(true);
-      setSyncStatus("");
-      const res = await verifyDuprPlayer(currentUser.dupr_id);
-      const updated = await saveUserProfile(
-        currentUser.name,
-        currentUser.phone,
-        currentUser.dupr_id,
-        res.doublesRating,
-        res.singlesRating
-      );
-      if (onUserUpdated) {
-        onUserUpdated(updated);
-      }
-      setSyncStatus(`✓ DUPR rating refreshed: Doubles ${res.doublesRating.toFixed(2)} • Singles ${res.singlesRating.toFixed(2)}`);
-      setTimeout(() => setSyncStatus(""), 4000);
-    } catch (err) {
-      setSyncStatus("Failed to sync DUPR rating. Please check your connection.");
-      setTimeout(() => setSyncStatus(""), 4000);
-    } finally {
-      setIsSyncing(false);
-    }
+  const handleSaveDuprRatings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const updated = await saveUserProfile(
+      currentUser.name,
+      currentUser.phone,
+      editDuprId.trim() || undefined,
+      editDoublesRating,
+      editSinglesRating
+    );
+    if (onUserUpdated) onUserUpdated(updated);
+    setIsEditingDupr(false);
+    setSaveStatus("✓ Official DUPR ratings saved successfully");
+    setTimeout(() => setSaveStatus(""), 4000);
   };
 
   return (
@@ -94,7 +83,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* DUPR Rating Sync Card */}
+      {/* Official DUPR Rating Card */}
       <div className="bg-blue-50/40 dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 border border-blue-200 dark:border-blue-500/30 rounded-3xl p-6 shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
@@ -106,18 +95,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <span>Player DUPR Ratings</span>
                 {currentUser.dupr_verified && (
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white px-2 py-0.5 rounded-full">
-                    Verified
+                    Linked
                   </span>
                 )}
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Official rating synced from Dynamic Universal Pickleball Rating (mydupr.com)
+                Official rating from Dynamic Universal Pickleball Rating
               </p>
             </div>
           </div>
 
           <a
-            href="https://mydupr.com"
+            href="https://dashboard.dupr.com"
             target="_blank"
             rel="noreferrer"
             className="text-xs text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 font-semibold"
@@ -136,7 +125,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <span className="text-3xl font-black text-blue-700 dark:text-blue-400 font-mono tracking-tight">
               {currentUser.dupr_doubles_rating ? currentUser.dupr_doubles_rating.toFixed(2) : "3.50"}
             </span>
-            <span className="text-[10px] text-slate-500 block mt-1 font-mono">
+            <span className="text-[10px] text-slate-500 block mt-1 font-mono truncate">
               {currentUser.dupr_id ? `ID: ${currentUser.dupr_id}` : "No ID linked"}
             </span>
           </div>
@@ -154,32 +143,123 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
 
-        {/* Sync Latest Rating Action */}
-        <div className="space-y-2">
-          <button
-            onClick={handleSyncDupr}
-            disabled={isSyncing}
-            className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
-            <span>{isSyncing ? "Fetching Latest Rating from DUPR..." : "Sync Latest DUPR Rating"}</span>
-          </button>
+        {/* Save Status Notification */}
+        {saveStatus && (
+          <div className="p-3 mb-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300 text-xs font-semibold text-center animate-fade-in">
+            {saveStatus}
+          </div>
+        )}
 
-          {syncStatus && (
-            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300 text-xs font-semibold text-center animate-fade-in">
-              {syncStatus}
+        {/* Direct Edit Form or Action Buttons */}
+        {isEditingDupr ? (
+          <form onSubmit={handleSaveDuprRatings} className="p-4 bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 animate-fade-in text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="font-bold text-slate-900 dark:text-white">Edit Official DUPR Ratings</span>
+              <button
+                type="button"
+                onClick={() => setIsEditingDupr(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          )}
-        </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                DUPR Member ID
+              </label>
+              <input
+                type="text"
+                value={editDuprId}
+                onChange={(e) => setEditDuprId(e.target.value)}
+                placeholder="e.g. DUPR-7482"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Official Doubles DUPR
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1.0"
+                  max="7.0"
+                  value={editDoublesRating}
+                  onChange={(e) => setEditDoublesRating(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-blue-700 dark:text-blue-400 font-bold font-mono outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Official Singles DUPR
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1.0"
+                  max="7.0"
+                  value={editSinglesRating}
+                  onChange={(e) => setEditSinglesRating(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sky-700 dark:text-sky-400 font-bold font-mono outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="submit"
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider text-xs transition-all shadow-xs flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>Save Ratings</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditingDupr(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setEditDuprId(currentUser.dupr_id || "");
+                setEditDoublesRating(currentUser.dupr_doubles_rating || 3.5);
+                setEditSinglesRating(currentUser.dupr_singles_rating || 3.5);
+                setIsEditingDupr(true);
+              }}
+              className="flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-2 active:scale-95"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Update DUPR Ratings</span>
+            </button>
+            <a
+              href="https://dashboard.dupr.com"
+              target="_blank"
+              rel="noreferrer"
+              className="py-3 px-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+            >
+              <span>mydupr.com</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        )}
 
         {/* Privacy Assurance Notice */}
         <div className="mt-4 p-3.5 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
           <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
             <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Match Privacy Guarantee</span>
+            <span>Authentic Ratings & Match Privacy Guarantee</span>
           </div>
           <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-            Match scores and rally records are saved exclusively to your device and are <strong className="text-slate-700 dark:text-slate-300">never submitted to DUPR</strong>. We only sync official player skill ratings so you can see authentic ratings courtside.
+            Enter your exact rating directly from your DUPR mobile app or mydupr.com. Your ratings will never be estimated, altered, or overwritten. Match scores are strictly local and are never submitted to DUPR.
           </p>
         </div>
 

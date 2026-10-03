@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { UserProfile } from "../types";
-import { Phone, User, ArrowRight, ShieldCheck, Award, ExternalLink } from "lucide-react";
-import { verifyDuprPlayer } from "../services/api";
+import { Phone, User, ArrowRight, ShieldCheck, Award, ExternalLink, Info } from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -17,25 +16,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, currentUser, onSav
   const [doublesRating, setDoublesRating] = useState<number>(currentUser?.dupr_doubles_rating || 3.5);
   const [singlesRating, setSinglesRating] = useState<number>(currentUser?.dupr_singles_rating || 3.5);
   const [error, setError] = useState<string>("");
-  const [isVerifying, setIsVerifying] = useState<boolean>(false);
-  const [verifiedSuccess, setVerifiedSuccess] = useState<boolean>(Boolean(currentUser?.dupr_verified));
 
   if (!isOpen) return null;
-
-  const handleDuprLookup = async () => {
-    if (!duprId.trim()) return;
-    setIsVerifying(true);
-    try {
-      const res = await verifyDuprPlayer(duprId);
-      setDoublesRating(res.doublesRating);
-      setSinglesRating(res.singlesRating);
-      setVerifiedSuccess(true);
-    } catch {
-      setVerifiedSuccess(false);
-    } finally {
-      setIsVerifying(false);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,78 +108,67 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, currentUser, onSav
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
                 <Award className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Link DUPR Rating (Optional)</span>
+                <span>Link DUPR Profile (Optional)</span>
               </label>
               <a
-                href="https://mydupr.com"
+                href="https://dashboard.dupr.com"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1 font-semibold"
+                className="text-[11px] text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors flex items-center gap-1 font-semibold"
               >
-                <span>Find ID</span>
+                <span>Check mydupr.com</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
 
-            <div className="flex gap-2">
+            <div>
               <input
                 type="text"
                 value={duprId}
-                onChange={(e) => {
-                  setDuprId(e.target.value);
-                  setVerifiedSuccess(false);
-                }}
-                placeholder="e.g. DUPR-7829 or 7GK482"
-                className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-blue-600 dark:focus:border-blue-500 rounded-xl py-2.5 px-3 text-slate-900 dark:text-white text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 font-mono"
+                onChange={(e) => setDuprId(e.target.value)}
+                placeholder="DUPR Member ID (e.g. DUPR-7829 or 7GK482)"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-blue-600 dark:focus:border-blue-500 rounded-xl py-2.5 px-3 text-slate-900 dark:text-white text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 font-mono"
               />
-              <button
-                type="button"
-                onClick={handleDuprLookup}
-                disabled={!duprId.trim() || isVerifying}
-                className="px-3.5 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold transition-all disabled:opacity-50"
-              >
-                {isVerifying ? "Verifying..." : "Verify"}
-              </button>
             </div>
 
-            {/* DUPR Rating Preview */}
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between">
-                <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold">Doubles DUPR</span>
+            {/* DUPR Rating Inputs */}
+            <div className="grid grid-cols-2 gap-2.5 mt-2.5">
+              <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-xl p-3">
+                <label className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold block mb-1">
+                  Official Doubles DUPR
+                </label>
                 <input
                   type="number"
                   step="0.01"
-                  min="2.0"
-                  max="6.5"
+                  min="1.0"
+                  max="7.0"
                   value={doublesRating}
-                  onChange={(e) => setDoublesRating(parseFloat(e.target.value) || 3.5)}
-                  className="w-16 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-0.5 text-right text-xs font-black text-blue-700 dark:text-blue-400 font-mono"
+                  onChange={(e) => setDoublesRating(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g. 3.25"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-left text-sm font-black text-blue-700 dark:text-blue-400 font-mono outline-none"
                 />
               </div>
 
-              <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between">
-                <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold">Singles DUPR</span>
+              <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-xl p-3">
+                <label className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold block mb-1">
+                  Official Singles DUPR
+                </label>
                 <input
                   type="number"
                   step="0.01"
-                  min="2.0"
-                  max="6.5"
+                  min="1.0"
+                  max="7.0"
                   value={singlesRating}
-                  onChange={(e) => setSinglesRating(parseFloat(e.target.value) || 3.5)}
-                  className="w-16 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-0.5 text-right text-xs font-black text-sky-700 dark:text-sky-400 font-mono"
+                  onChange={(e) => setSinglesRating(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g. 3.10"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-left text-sm font-black text-sky-700 dark:text-sky-400 font-mono outline-none"
                 />
               </div>
             </div>
-
-            {verifiedSuccess && (
-              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1.5 flex items-center gap-1 font-semibold">
-                ✓ DUPR profile linked: Ratings active on all match scorecards.
-              </p>
-            )}
 
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 font-medium">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 inline shrink-0" />
-              <span>Only your rating is synced. Match scores are strictly private and never sent to DUPR.</span>
+              <span>Enter your official rating from your DUPR app. Scores are kept strictly private.</span>
             </p>
           </div>
 
