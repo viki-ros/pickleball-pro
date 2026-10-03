@@ -18,11 +18,13 @@ import {
   createMatch,
   fetchUserStats,
 } from "./services/api";
+import { localStore } from "./services/localStore";
 import { Swords, Plus, History } from "lucide-react";
 
 export function App() {
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  // Synchronous multi-tier storage initialization ensures the login persists across page loads
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => localStore.getUser());
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(() => !localStore.getUser());
   const [activeTab, setActiveTab] = useState<"match" | "friends" | "stats" | "profile">("match");
 
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -42,16 +44,17 @@ export function App() {
 
   const [showCreateMatchModal, setShowCreateMatchModal] = useState<boolean>(false);
   const [preselectedFriend, setPreselectedFriend] = useState<Friend | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Load User & Core Data
   const loadData = async () => {
     try {
-      setLoading(true);
-      const user = await getUserProfile();
-      setCurrentUser(user);
+      const user = (await getUserProfile()) || localStore.getUser();
 
-      if (!user) {
+      if (user) {
+        setCurrentUser(user);
+        setShowAuthModal(false);
+      } else {
         setShowAuthModal(true);
         return;
       }

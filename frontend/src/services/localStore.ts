@@ -8,18 +8,81 @@ const KEY_DUPR_CONFIG = "pb_dupr_config_v2";
 
 const AVATAR_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4", "#f97316"];
 
+const LEGACY_USER_KEYS = ["pb_user_profile_v1", "pickleball_user_v1", "currentUser", "pb_user"];
+
+function getCookie(name: string): string | null {
+  try {
+    const match = document.cookie.match(new RegExp("(^|;\\s*)" + name + "=([^;]*)"));
+    return match ? decodeURIComponent(match[2]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCookie(name: string, value: string, days: number = 365): void {
+  try {
+    const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+  } catch {}
+}
+
+function removeCookie(name: string): void {
+  try {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+  } catch {}
+}
+
 function getStorage<T>(key: string, fallback: T): T {
+  // 1. Try localStorage
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
+    if (raw) return JSON.parse(raw);
+  } catch {}
+
+  // 2. Try sessionStorage
+  try {
+    const sessRaw = sessionStorage.getItem(key);
+    if (sessRaw) {
+      try { localStorage.setItem(key, sessRaw); } catch {}
+      return JSON.parse(sessRaw);
+    }
+  } catch {}
+
+  // 3. Try Cookie
+  try {
+    const cookieRaw = getCookie(key);
+    if (cookieRaw) {
+      try {
+        localStorage.setItem(key, cookieRaw);
+        sessionStorage.setItem(key, cookieRaw);
+      } catch {}
+      return JSON.parse(cookieRaw);
+    }
+  } catch {}
+
+  // 4. Legacy migration for user profile
+  if (key === KEY_USER) {
+    for (const legacyKey of LEGACY_USER_KEYS) {
+      try {
+        const legacyRaw = localStorage.getItem(legacyKey);
+        if (legacyRaw) {
+          const parsed = JSON.parse(legacyRaw);
+          setStorage(KEY_USER, parsed);
+          return parsed;
+        }
+      } catch {}
+    }
   }
+
+  return fallback;
 }
 
 function setStorage<T>(key: string, val: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify(val));
+    const str = JSON.stringify(val);
+    try { localStorage.setItem(key, str); } catch {}
+    try { sessionStorage.setItem(key, str); } catch {}
+    try { setCookie(key, str, 365); } catch {}
   } catch {}
 }
 
@@ -87,7 +150,12 @@ export const localStore = {
   },
 
   logoutUser(): void {
-    localStorage.removeItem(KEY_USER);
+    try { localStorage.removeItem(KEY_USER); } catch {}
+    try { sessionStorage.removeItem(KEY_USER); } catch {}
+    try { removeCookie(KEY_USER); } catch {}
+    for (const k of LEGACY_USER_KEYS) {
+      try { localStorage.removeItem(k); } catch {}
+    }
   },
 
   // FRIENDS
