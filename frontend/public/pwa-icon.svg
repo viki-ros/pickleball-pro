@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="100%" stop-color="#022c22" />
+    </linearGradient>
+    <linearGradient id="paddle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="ball" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#eab308" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- App Icon Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+
+  <!-- Subtle Court Lines -->
+  <path d="M 64 256 L 448 256" stroke="#10b981" stroke-width="8" stroke-dasharray="16 16" opacity="0.4" />
+  <rect x="64" y="64" width="384" height="384" rx="16" fill="none" stroke="#10b981" stroke-width="8" opacity="0.3" />
+
+  <!-- Pickleball Paddle -->
+  <g filter="url(#shadow)" transform="rotate(-25 220 280)">
+    <!-- Paddle Face -->
+    <rect x="140" y="100" width="160" height="220" rx="60" fill="url(#paddle)" stroke="#60a5fa" stroke-width="6" />
+    <!-- Paddle Edge Guard -->
+    <rect x="136" y="96" width="168" height="228" rx="64" fill="none" stroke="#1e3a8a" stroke-width="4" />
+    <!-- Handle -->
+    <rect x="200" y="315" width="40" height="110" rx="8" fill="#1e293b" />
+    <path d="M 200 335 L 240 335 M 200 355 L 240 355 M 200 375 L 240 375 M 200 395 L 240 395" stroke="#475569" stroke-width="4" />
+    <rect x="195" y="420" width="50" height="15" rx="5" fill="#0f172a" />
+  </g>
+
+  <!-- Yellow Perforated Pickleball -->
+  <g filter="url(#shadow)">
+    <circle cx="340" cy="190" r="75" fill="url(#ball)" stroke="#ca8a04" stroke-width="4" />
+    <!-- Perforations (Holes) -->
+    <circle cx="340" cy="190" r="10" fill="#a16207" />
+    <circle cx="310" cy="170" r="9" fill="#a16207" />
+    <circle cx="370" cy="170" r="9" fill="#a16207" />
+    <circle cx="320" cy="215" r="9" fill="#a16207" />
+    <circle cx="360" cy="215" r="9" fill="#a16207" />
+    <circle cx="340" cy="145" r="8" fill="#a16207" />
+    <circle cx="340" cy="235" r="8" fill="#a16207" />
+    <circle cx="285" cy="190" r="8" fill="#a16207" />
+    <circle cx="395" cy="190" r="8" fill="#a16207" />
+  </g>
+</svg>
